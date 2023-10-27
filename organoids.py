@@ -50,7 +50,7 @@ class NN:
         eps=0.3, eps_decay=0.95, 
         hidden_sizes=[64, 32, 48, 16, 8, 4], 
         state_space_size=46, action_space_size=2,
-        buffer_size=50
+        buffer_size=20
         ):
         """
         Initialize the Neural Network.
@@ -70,6 +70,7 @@ class NN:
         self.state_space_size = state_space_size
         self.action_space_size = action_space_size
         self.buffer = deque(maxlen=buffer_size)
+        self.batch_size = int(buffer_size*0.2)
         self.model = Sequential()
         self.model.add(InputLayer((self.state_space_size)))
         for size in hidden_sizes:
@@ -113,8 +114,7 @@ class NN:
         self.buffer.append((state, action, reward, new_state))
         if len(self.buffer) >= self.buffer.maxlen:
             # Sample a batch of experiences from the buffer
-            batch_size = 32  # You can adjust this batch size as needed
-            batch = random.sample(self.buffer, batch_size)
+            batch = random.sample(self.buffer, self.batch_size)
 
             # Prepare the training data
             states, targets = [], []
@@ -151,9 +151,9 @@ class DQN(NN):
         self, 
         discount=0.95, 
         eps=0.3, eps_decay=0.95, 
-        hidden_sizes=[32, 8, 16, 4], 
+        hidden_sizes=[64, 32, 48, 16, 8, 4], 
         state_space_size=46, action_space_size=2,
-        buffer_size=50,
+        buffer_size=20,
         ):
         self.batch_size=int(buffer_size * 0.2)
         self.discount = discount
@@ -1042,7 +1042,7 @@ class World():
     
 if __name__ == "__main__":
     # Create the world
-    world = World(name="Midgard", radius=100, doomsday_ticker=500, obstacle_ratio=0.01, abundance=100.00)
+    world = World(name="Midgard", radius=100, doomsday_ticker=500, obstacle_ratio=0.01, abundance=50.00)
 
     # Define parameters for organoids and food
     organoid_params = {
@@ -1079,8 +1079,8 @@ if __name__ == "__main__":
 
     # Spawn initial organoids and food
 
-    world.spawn_food(num_food=100, food_params=food_params)
-    world.spawn_obstacles(5, obstacle_params=obstacle_params)
+    world.spawn_food(num_food=50, food_params=food_params)
+    world.spawn_obstacles(10, obstacle_params=obstacle_params)
     world.spawn_walls()
     world.spawn_organoids(num_organoids=2, organoid_params=organoid_params)
     world.spawn_organoids(num_organoids=1, organoid_params=evolved_params)

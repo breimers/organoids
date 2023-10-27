@@ -73,7 +73,7 @@
 ```
 
 ## Experiment 6
-CHangelog:
+- Changelog:
     - Added experential buffer
     - Added DQN option
 - Environmental conditions:
@@ -87,5 +87,28 @@ CHangelog:
     - Lowered reproduction cooldown from 500 to 100 steps
 - NN Settings:
 ```python
-    discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=46, action_space_size=2, buffer_size=100
+    discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=46, action_space_size=2, buffer_size=10
+```
+- DQN Settings:
+```python
+    discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=46, action_space_size=2, buffer_size=10,
+```
+
+## Experiment 7
+- Environmental conditions:
+    - 500 steps
+    - 5s food spawn interval
+    - 50 Food
+    - 3 basic organoids
+    - 1 evolved organoids (NN)
+    - 1 dqn evolved organoids (DQN)
+    - 10 obstacles
+    - Lowered reproduction cooldown from 500 to 100 steps
+- NN Settings:
+```python
+    discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=46, action_space_size=2, buffer_size=10
+```
+- DQN Settings:
+```python
+    discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=46, action_space_size=2, buffer_size=10,
 ```
