@@ -6,9 +6,6 @@ NN powered Ecosim Automata
 This is a passion project of mine to create an open-source ecosim/automata powered by a flexible NN architecture.
 While it's currently a simple implementation, it may serve as the base for more complex projects in the future.
 
-I highly encourage everyone to PR and Fork this repo, I just ask you contribute back per terms of the license.
-I want this to be a community, open-source endeveaour and everyone should treat eachother with respect.
-
 # getting started
 
 The organoids module contains five classes of objects:
