@@ -40,7 +40,7 @@ class NN:
             Train the neural network based on experiences.
 
     """
-    def __init__(self, discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[14, 28, 14, 8, 4], state_space_size=7, action_space_size=2):
+    def __init__(self, discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[92, 20, 46, 8, 4], state_space_size=46, action_space_size=2):
         """
         Initialize the Neural Network.
 
@@ -59,7 +59,7 @@ class NN:
         self.state_space_size = state_space_size
         self.action_space_size = action_space_size
         self.model = Sequential()
-        self.model.add(InputLayer((6 + 10 * 4)))
+        self.model.add(InputLayer((self.state_space_size)))
         for size in hidden_sizes:
             self.model.add(Dense(size, activation='relu'))
         self.model.add(Dense(action_space_size, activation='linear'))
