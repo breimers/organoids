@@ -8,15 +8,19 @@ import pandas as pd
 from keras.models import Sequential
 from keras.layers import InputLayer
 from keras.layers import Dense
+from keras.utils import disable_interactive_logging
 from uuid import uuid4
 from itertools import chain
 from datetime import datetime
+from collections import deque
 
 # Categories
 # organoids=3
 # food=2
 # obstacle=1
 # base=0
+
+disable_interactive_logging()
 
 class NN:
     """
@@ -40,7 +44,14 @@ class NN:
             Train the neural network based on experiences.
 
     """
-    def __init__(self, discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[92, 20, 46, 8, 4], state_space_size=46, action_space_size=2):
+    def __init__(
+        self, 
+        discount=0.95, 
+        eps=0.3, eps_decay=0.95, 
+        hidden_sizes=[64, 32, 48, 16, 8, 4], 
+        state_space_size=46, action_space_size=2,
+        buffer_size=50
+        ):
         """
         Initialize the Neural Network.
 
@@ -58,6 +69,7 @@ class NN:
         self.eps_decay = eps_decay
         self.state_space_size = state_space_size
         self.action_space_size = action_space_size
+        self.buffer = deque(maxlen=buffer_size)
         self.model = Sequential()
         self.model.add(InputLayer((self.state_space_size)))
         for size in hidden_sizes:
@@ -79,12 +91,10 @@ class NN:
         self.eps *= self.eps_decay
         if np.random.rand() <= self.eps:
             # Explore: choose a random action
-            print("going random")
             return (random.uniform(-1, 1), random.uniform(-1, 1))
         else:
             # Exploit: choose the action with the highest Q-value
-            print("doing smart")
-            x, y = self.model.predict(state).squeeze()
+            x, y = self.model(state, training=False)[0]
             mean = (abs(x) + abs(y)) / 2
             return (min([max([x/mean, -1]), 1]), min([max([y/mean, -1]), 1]))
 
@@ -99,6 +109,27 @@ class NN:
             new_state (numpy.ndarray): The new state.
 
         """
+        ## Add experential buffer for stable training
+        self.buffer.append((state, action, reward, new_state))
+        if len(self.buffer) >= self.buffer.maxlen:
+            # Sample a batch of experiences from the buffer
+            batch_size = 32  # You can adjust this batch size as needed
+            batch = random.sample(self.buffer, batch_size)
+
+            # Prepare the training data
+            states, targets = [], []
+            for state, action, reward, new_state in batch:
+                target = reward + self.discount * np.max(self.model.predict(new_state))
+                target_f = self.model.predict(state)
+                target_f[0] = self.model.predict(state)[0]
+                target_f[0][0] = target
+
+                states.append(state)
+                targets.append(target_f)
+
+            # Train the model on the batch of experiences
+            self.model.fit(np.array(states).reshape(-1, self.state_space_size), np.array(targets).reshape(-1, self.action_space_size), epochs=1, verbose=0)
+
         # Implement DQN training here
         # Update the Q-values based on the Bellman equation
         target = reward + self.discount * np.max(self.model.predict(new_state))
@@ -115,7 +146,70 @@ class NN:
         
         self.model.fit(state, target_f, epochs=1, verbose=0)
 
+class DQN(NN):
+    def __init__(
+        self, 
+        discount=0.95, 
+        eps=0.3, eps_decay=0.95, 
+        hidden_sizes=[32, 8, 16, 4], 
+        state_space_size=46, action_space_size=2,
+        buffer_size=50,
+        ):
+        self.batch_size=int(buffer_size * 0.2)
+        self.discount = discount
+        self.eps = eps
+        self.eps_decay = eps_decay
+        self.hidden_sizes = hidden_sizes
+        self.model = self.build_q_network(state_space_size, action_space_size)
+        self.q_model = self.build_q_network(state_space_size, action_space_size)
+        self.buffer = deque(maxlen=buffer_size)
+        self.update_q_model()
 
+    def build_q_network(self, state_size, action_size):
+        model = Sequential()
+        model.add(InputLayer(input_shape=(state_size,)))
+        # Add hidden layers
+        for size in self.hidden_sizes:
+            model.add(Dense(size, activation='relu'))
+        # Output layer with linear activation (Q-values)
+        model.add(Dense(action_size, activation='linear'))
+        model.compile(optimizer='adam', loss='mse')
+        return model
+
+    def update_q_model(self):
+        # Update the target network with the weights from the online network
+        self.q_model.set_weights(self.model.get_weights())
+
+    def train(self, *args, **kwargs):
+        if len(self.buffer) < self.batch_size:
+            return
+
+        # Sample a mini-batch from the replay buffer
+        batch = random.sample(self.buffer, self.batch_size)
+        states, actions, rewards, next_states = zip(*batch)
+
+        # Convert states and next_states to numpy arrays
+        states = np.array(states)
+        next_states = np.array(next_states)
+
+        # Calculate the target Q-values using the target network
+        target_q_values = self.q_model.predict(next_states)
+        max_target_q_values = np.max(target_q_values, axis=1)  # Calculate the maximum Q-value for each sample
+
+        # Calculate the online network's Q-values for the current states
+        current_q_values = self.model.predict(states)
+
+        # Update the Q-values for the taken actions
+        for i in range(self.batch_size):
+            current_q_values[i][actions[i]] = rewards[i] + self.discount * max_target_q_values[i]
+
+        # Train the online network on the mini-batch
+        self.model.fit(states, current_q_values, verbose=0)
+
+        # Update the target network periodically
+        self.update_q_model()
+
+    
 class BaseObject:
     """
     Base Object Class.
@@ -231,7 +325,7 @@ class Organoid(BaseObject):
             Property to get the step size for movement.
 
     """
-    def __init__(self, name, lifespan, size, calories, calorie_limit, position, metabolism, rgb, smart):
+    def __init__(self, name, lifespan, size, calories, calorie_limit, position, metabolism, rgb, smart, cooldown_duration, modeltype):
         """
         Initialize an Organoid.
 
@@ -248,7 +342,8 @@ class Organoid(BaseObject):
         """
         super().__init__(name, size, position, rgb)
         self.name = str(name) or "Organoid"
-        self.lifespan = int(lifespan) or 60 # seconds
+        self.lifespan = int(lifespan) or 60 # steps
+        self.max_lifespan = int(lifespan) or 60
         self.size = float(size) or 2 # pixel radius
         self.calories = int(calories) or 100 # energy
         self.calorie_limit = int(calorie_limit) or 100
@@ -257,15 +352,20 @@ class Organoid(BaseObject):
         self.alive = True
         self.rgb = tuple(rgb) or (100, 100, 100)
         self.reproduction_cooldown = 0
-        self.cooldown_duration = 500
+        self.cooldown_duration = int(cooldown_duration) or 500
         self.mutation_rate = 0.2
         self.vision_range = 10
-        self.brain = NN()
         self.children = 0
         self.score = 0
         self.last_score = self.score
         self.category = 3
         self.smart = smart
+        self.modeltype = modeltype
+        if self.smart and self.modeltype:
+            if self.modeltype == 'NN':
+                self.brain = NN()
+            if self.modeltype == 'DQN':
+                self.brain = DQN()
 
     def filter_objs_by_distance(self, objects):
         """
@@ -313,7 +413,10 @@ class Organoid(BaseObject):
             self.move(random.uniform(-1.00, 1.00), random.uniform(-1.00, 1.00))
             self.metabolize()
             self.update_score()
+        self.lifespan -=1
         if self.calories <= 0:
+            self.alive = False
+        if self.lifespan <=0:
             self.alive = False
 
     def train_neural_network(self, delta_score, objects):
@@ -355,7 +458,6 @@ class Organoid(BaseObject):
         action = self.brain.choose_action(state)
 
         # Calculate new position based on action
-        print(action)
         x_off, y_off = action
         self.move(x_off, y_off)
         self.metabolize()
@@ -411,10 +513,11 @@ class Organoid(BaseObject):
             offset_y = random.uniform(-self.size, self.size)
             new_position = (self.position[0] + offset_x, self.position[1] + offset_y)
             new_organoid = Organoid(name=self.name, lifespan=self.lifespan, size=(self.size / 2), calories=(self.calorie_limit / 2),
-                                    calorie_limit=(self.calorie_limit / 2), position=new_position, metabolism=self.metabolism, rgb=self.rgb, smart=self.smart)
+                                    calorie_limit=(self.calorie_limit / 2), position=new_position, metabolism=self.metabolism, rgb=self.rgb, smart=self.smart, modeltype=self.modeltype, cooldown_duration=self.cooldown_duration)
 
             # Mutate the parameters within 10% of the parent's values (except for size)
-            parameter_names = ["lifespan", "calorie_limit", "metabolism", "rgb"]
+            new_organoid.lifespan = self.max_lifespan
+            parameter_names = ["max_lifespan", "calorie_limit", "metabolism", "rgb"]
             for param_name in parameter_names:
                 parent_value = getattr(self, param_name)
                 if param_name == "rgb":
@@ -668,6 +771,7 @@ class World():
         self.abundance = float(abundance) or 1.00
         self.obstacle_ratio = float(obstacle_ratio) or 0.01
         self.doomsday_ticker = int(doomsday_ticker) or 100000
+        self.world_run_id = f"organoid_sim_{str(int(datetime.now().timestamp()))}"
         self.organoids = []
         self.food = []
         self.obstacles = []
@@ -730,13 +834,14 @@ class World():
                     "score":f"{o.score}",
                     "name":f"{o.name}",
                     "size":f"{o.size}",
+                    "modeltype":f"{o.modeltype}",
                     "calories":f"{o.calories}",
                     "max_calories":f"{o.calorie_limit}",
                     "children":f"{o.children}"
                 }
             )
         scorecard = pd.DataFrame.from_records(scores)
-        scorecard.to_csv(f"organoid_sim_{str(int(datetime.now().timestamp()))}.csv")
+        scorecard.to_csv(self.world_run_id + ".csv")
         return scorecard
     
     def run_simulation(self):
@@ -755,8 +860,8 @@ class World():
         organoids_scatter = ax.scatter([], [], c='red', marker='o', s=50, label='Organoids')
         food_scatter = ax.scatter([], [], c='green', marker='s', s=20, label='Food')
         obstacle_scatter = ax.scatter([], [], c='gray', marker='^', s=20, label='Obstacles')
-        ax.legend(loc='upper right')
-
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+        ax.set_title(self.world_run_id)
         def normalize_rgb(rgb):
             # Normalize RGB values to range [0, 1]
             return tuple(comp / 255.0 for comp in rgb)
@@ -942,18 +1047,24 @@ if __name__ == "__main__":
     # Define parameters for organoids and food
     organoid_params = {
         "name": "Silly Blob", 
-        "lifespan": 60, 
+        "lifespan": 501, 
         "size": 5, 
         "calories": 50, 
         "calorie_limit": 50, 
         "metabolism": 0.01, 
         "rgb": (255, 10, 10), 
         "position": (0, 0), 
-        "smart": False
+        "smart": False,
+        "cooldown_duration": 100,
+        "modeltype": None
     }
     evolved_params = organoid_params.copy()
     evolved_params["smart"] = True
     evolved_params["name"] = "Brainy Blob"
+    evolved_params["modeltype"] = "NN"
+    new_evolved_params = evolved_params.copy()
+    new_evolved_params["name"] = "Learny Blob"
+    new_evolved_params["modeltype"] = "DQN"
     food_params = {
         "name": "Algae", 
         "size": 2.5, 
@@ -972,7 +1083,8 @@ if __name__ == "__main__":
     world.spawn_obstacles(5, obstacle_params=obstacle_params)
     world.spawn_walls()
     world.spawn_organoids(num_organoids=2, organoid_params=organoid_params)
-    world.spawn_organoids(num_organoids=2, organoid_params=evolved_params)
+    world.spawn_organoids(num_organoids=1, organoid_params=evolved_params)
+    world.spawn_organoids(num_organoids=1, organoid_params=new_evolved_params)
 
     food_spawn_interval = 5  # Adjust the interval (in seconds) for continuous food spawning
     food_spawner_thread = threading.Thread(target=world.spawn_continuous_food, args=(food_spawn_interval,))
