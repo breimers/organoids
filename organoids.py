@@ -1,27 +1,250 @@
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import threading
 import time
 import random
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.autograd as autograd
-    
+import pandas as pd
+from keras.models import Sequential
+from keras.layers import InputLayer
+from keras.layers import Dense
+from uuid import uuid4
+from itertools import chain
+
+
+# Categories
+# organoids=3
+# food=2
+# obstacle=1
+# base=0
+
+class NN:
+    """
+    Neural Network for Organoid Agents.
+
+    This class defines a neural network used by organoid agents to make decisions.
+
+    Attributes:
+        discount (float): Discount factor for future rewards.
+        eps (float): Exploration rate.
+        eps_decay (float): Rate at which exploration rate decays.
+        state_space_size (int): Dimension of the state space.
+        action_space_size (int): Dimension of the action space.
+        model (Sequential): Keras Sequential model for the neural network.
+
+    Methods:
+        choose_action(state):
+            Choose an action for the given state.
+
+        train(state, action, reward, new_state):
+            Train the neural network based on experiences.
+
+    """
+    def __init__(self, discount=0.95, eps=0.5, eps_decay=0.999, hidden_sizes=[20], state_space_size=7, action_space_size=2):
+        """
+        Initialize the Neural Network.
+
+        Args:
+            discount (float, optional): Discount factor for future rewards. Default is 0.95.
+            eps (float, optional): Exploration rate. Default is 0.5.
+            eps_decay (float, optional): Rate at which exploration rate decays. Default is 0.999.
+            hidden_sizes (list, optional): List of hidden layer sizes. Default is [20].
+            state_space_size (int, optional): Dimension of the state space. Default is 7.
+            action_space_size (int, optional): Dimension of the action space. Default is 2.
+
+        """
+        self.discount = discount
+        self.eps = eps
+        self.eps_decay = eps_decay
+        self.state_space_size = state_space_size
+        self.action_space_size = action_space_size
+        self.model = Sequential()
+        self.model.add(InputLayer((6 + 10 * 4)))
+        for size in hidden_sizes:
+            self.model.add(Dense(size, activation='relu'))
+        self.model.add(Dense(action_space_size, activation='linear'))
+        self.model.compile(loss='mse', optimizer='adam', metrics=['mae'])
+
+    def choose_action(self, state):
+        """
+        Choose an action for the given state.
+
+        Args:
+            state (numpy.ndarray): The current state.
+
+        Returns:
+            tuple: A tuple of two discrete float values between -1 and 1 representing the chosen action.
+
+        """
+        self.eps *= self.eps_decay
+        if np.random.rand() <= self.eps:
+            # Explore: choose a random action
+            print("going random")
+            return (random.uniform(-1, 1), random.uniform(-1, 1))
+        else:
+            # Exploit: choose the action with the highest Q-value
+            print("doing smart")
+            x, y = self.model.predict(state).squeeze()
+            mean = (abs(x) + abs(y)) / 2
+            return (min([max([x/mean, -1]), 1]), min([max([y/mean, -1]), 1]))
+
+    def train(self, state, action, reward, new_state):
+        """
+        Train the neural network based on experiences.
+
+        Args:
+            state (numpy.ndarray): The current state.
+            action (tuple): The chosen action.
+            reward (float): The reward received.
+            new_state (numpy.ndarray): The new state.
+
+        """
+        # Implement DQN training here
+        # Update the Q-values based on the Bellman equation
+        target = reward + self.discount * np.max(self.model.predict(new_state))
+        model_output = self.model.predict(state)
+        
+        # Copy the model's prediction
+        target_f = model_output.copy()
+        
+        # Update all elements in the action space
+        target_f[0] = model_output[0]
+        
+        # Set the first action element to the target
+        target_f[0][0] = target
+        
+        self.model.fit(state, target_f, epochs=1, verbose=0)
+
+
 class BaseObject:
+    """
+    Base Object Class.
+
+    This class defines a base object with common attributes and methods for other objects in the simulation.
+
+    Attributes:
+        name (str): The name of the object.
+        id (uuid.UUID): The unique identifier of the object.
+        size (float): The size of the object.
+        position (tuple): The position of the object.
+        rgb (tuple): The color of the object in RGB format.
+        category (int): The category of the object (0 for base).
+
+    Methods:
+        get_info():
+            Get information about the object.
+
+    """
     def __init__(self, name="obj", size=1, position=(0,0), rgb=(0, 0, 0)):
+        """
+        Initialize a BaseObject.
+
+        Args:
+            name (str, optional): The name of the object. Default is "obj".
+            size (float, optional): The size of the object. Default is 1.
+            position (tuple, optional): The position of the object. Default is (0, 0).
+            rgb (tuple, optional): The color of the object in RGB format. Default is (0, 0, 0).
+
+        """
         self.name = str(name) or "Object"
+        self.id = uuid4()
         self.size = float(size) or 1.0
         self.position = tuple(position) or (0.0, 0.0)
         self.rgb = tuple(rgb) or (100, 100, 100)
+        self.category = 0
 
     def get_info(self):
+        """
+        Get information about the object.
+
+        Returns:
+            str: Information about the object, including its name and size.
+
+        """
         return f"{self.name}\nSize: {self.size:.2f}"
 
 class Organoid(BaseObject):
+    """
+    Organoid Class.
+
+    This class defines organoid objects, which are agents in the simulation.
+
+    Attributes:
+        name (str): The name of the organoid.
+        lifespan (int): The lifespan of the organoid in seconds.
+        size (float): The size of the organoid (pixel radius).
+        calories (int): The current energy level of the organoid.
+        calorie_limit (int): The maximum energy level of the organoid.
+        position (tuple): The position of the organoid.
+        metabolism (float): The metabolism rate of the organoid.
+        alive (bool): Whether the organoid is alive.
+        rgb (tuple): The color of the organoid in RGB format.
+        reproduction_cooldown (int): Cooldown time for reproduction.
+        cooldown_duration (int): The duration of the cooldown.
+        mutation_rate (float): Rate of mutation for offspring.
+        vision_range (int): The range of vision for the organoid.
+        brain (NN): The neural network controlling the organoid.
+        children (int): The number of offspring.
+        score (int): The score of the organoid.
+        last_score (int): The previous score of the organoid.
+        category (int): The category of the organoid (3 for organoid).
+
+    Methods:
+        filter_objs_by_distance(objects):
+            Filter objects within the organoid's vision range.
+
+        update(food, organoids, obstacles):
+            Update the organoid's state.
+
+        train_neural_network(delta_score, objects):
+            Train the neural network based on experiences.
+
+        get_info():
+            Get information about the organoid.
+
+        metabolize():
+            Perform metabolism and potentially grow.
+
+        split_organoid():
+            Split the organoid to create offspring.
+
+        update_cooldown():
+            Update the reproduction cooldown.
+
+        move(x_off, y_off):
+            Move the organoid.
+
+        consume_food(food):
+            Consume food and gain calories.
+
+        is_alive():
+            Check if the organoid is alive.
+
+        distance_to(other):
+            Calculate the distance to another object.
+
+        update_score():
+            Update the organoid's score.
+
+        step_size:
+            Property to get the step size for movement.
+
+    """
     def __init__(self, name, lifespan, size, calories, calorie_limit, position, metabolism, rgb):
+        """
+        Initialize an Organoid.
+
+        Args:
+            name (str): The name of the organoid.
+            lifespan (int): The lifespan of the organoid in seconds.
+            size (float): The size of the organoid (pixel radius).
+            calories (int): The initial energy level of the organoid.
+            calorie_limit (int): The maximum energy level of the organoid.
+            position (tuple): The initial position of the organoid.
+            metabolism (float): The metabolism rate of the organoid.
+            rgb (tuple): The color of the organoid in RGB format.
+
+        """
         super().__init__(name, size, position, rgb)
         self.name = str(name) or "Organoid"
         self.lifespan = int(lifespan) or 60 # seconds
@@ -35,22 +258,133 @@ class Organoid(BaseObject):
         self.reproduction_cooldown = 0
         self.cooldown_duration = 500
         self.mutation_rate = 0.2
-
+        self.vision_range = 10
+        self.brain = NN()
         self.children = 0
         self.score = 0
+        self.last_score = self.score
+        self.category = 3
 
-    def update(self):
-        self.move()
-        self.metabolize()
-        self.update_score()
+    def filter_objs_by_distance(self, objects):
+        """
+        Filter objects within the organoid's vision range.
+
+        Args:
+            objects (list): List of objects to filter.
+
+        Returns:
+            list: Filtered list of objects based on distance.
+
+        """
+        new_obj_list = list()
+        for object in objects:
+            if self.distance_to(object) <= self.vision_range:
+                new_obj_list.append(
+                    {
+                        "x-position": object.position[0],
+                        "y-position": object.position[1],
+                        "size": object.size, 
+                        "category": object.category,
+                    }
+                )
+        return new_obj_list
+    
+    def update(self, food, organoids, obstacles):
+        """
+        Update the organoid's state.
+
+        Args:
+            food (list): List of food objects.
+            organoids (list): List of organoid objects.
+            obstacles (list): List of obstacle objects.
+
+        """
+        organoids = [organoid for organoid in organoids if organoid.id != self.id]
+        objects = list(food)
+        objects.extend(obstacles)
+        objects.extend(organoids)
+        objects = self.filter_objs_by_distance(objects)
+        delta_score = self.score - self.last_score
+        self.train_neural_network(delta_score, objects)
         if self.calories <= 0:
             self.alive = False
 
+    def train_neural_network(self, delta_score, objects):
+        """
+        Train the neural network based on experiences.
+
+        Args:
+            delta_score (int): The change in the organoid's score.
+            objects (list): List of objects within the organoid's vision range.
+
+        """
+        # Determine the maximum number of objects to consider
+        max_objects = 10  # Adjust this based on your requirements
+
+        # Create arrays to hold the object representations and their counts
+        object_representations = np.zeros((max_objects, 4), dtype=float)  # Assuming 4 attributes per object
+        object_counts = min(len(objects), max_objects)
+
+        # Flatten attributes for each object
+        for i in range(object_counts):
+            obj = objects[i]
+            object_representations[i] = [obj["category"], obj["size"], obj["x-position"], obj["y-position"]]
+
+        # Fill any remaining slots with zeros
+        for i in range(object_counts, max_objects):
+            object_representations[i] = [0, 0, 0, 0]
+
+        # Construct the state and action arrays
+        state = np.array([
+            self.calories, 
+            self.size, 
+            self.position[0], 
+            self.position[1], 
+            delta_score,
+            *object_representations.flatten(),
+            self.reproduction_cooldown,
+        ]).reshape(1, -1)
+
+        action = self.brain.choose_action(state)
+
+        # Calculate new position based on action
+        print(action)
+        x_off, y_off = action
+        self.move(x_off, y_off)
+        self.metabolize()
+        self.update_score()
+
+        # Calculate reward (using delta_score as reward)
+        reward = self.score - self.last_score
+
+        new_state = np.array([
+            self.calories, 
+            self.size, 
+            self.position[0], 
+            self.position[1], 
+            reward,
+            *object_representations.flatten(),
+            self.reproduction_cooldown,
+        ]).reshape(1, -1)
+
+        self.brain.train(state, action, reward, new_state)
+
     def get_info(self):
+        """
+        Get information about the organoid.
+
+        Returns:
+            str: Information about the organoid, including its name and current state.
+
+        """
         base_info = super().get_info()
         return f"Name: {self.name}\nSize: {self.size:.2f}\nCalories: {int(self.calories)}/{self.calorie_limit}\nScore: {self.score}"
 
     def metabolize(self):
+        """
+        Perform metabolism and potentially grow.
+
+        """
         # This checks if the organoid has excess calories, if so, grow and increase the calorie limit.
         if self.calories > self.calorie_limit:
             diff = self.calories - self.calorie_limit
@@ -60,6 +394,10 @@ class Organoid(BaseObject):
         self.calories -= self.metabolism * (self.size / 4)
         
     def split_organoid(self):
+        """
+        Split the organoid to create offspring.
+
+        """
         if self.reproduction_cooldown == 0:
             # Create a new organoid next to the current one with base parameters
             offset_x = random.uniform(-self.size, self.size)
@@ -91,15 +429,25 @@ class Organoid(BaseObject):
                 world.organoids.append(new_organoid)
             
     def update_cooldown(self):
+        """
+        Update the reproduction cooldown.
+
+        """
         # Decrease the reproduction cooldown timer (if greater than zero)
         if self.reproduction_cooldown > 0:
             self.reproduction_cooldown -= 1
+            
+    def move(self, x_off, y_off):
+        """
+        Move the organoid.
 
-    def move(self):
-        x_off = random.randint(-1 * self.step_size, self.step_size)
-        y_off = random.randint(-1 * self.step_size, self.step_size)
-        new_x = self.position[0] + x_off
-        new_y = self.position[1] + y_off
+        Args:
+            x_off (float): Offset for the X-axis.
+            y_off (float): Offset for the Y-axis.
+
+        """
+        new_x = self.position[0] + x_off*self.step_size
+        new_y = self.position[1] + y_off*self.step_size
 
         # Check if the potential new position is within the world boundaries
         if 0 <= new_x <= 2 * world.radius and 0 <= new_y <= 2 * world.radius:
@@ -109,31 +457,103 @@ class Organoid(BaseObject):
             self.position = (world.radius, world.radius)
 
     def consume_food(self, food):
+        """
+        Consume food and gain calories.
+
+        Args:
+            food (list): List of food objects.
+
+        """
         self.calories += food.calories
         food.calories = 0
 
     def is_alive(self):
+        """
+        Check if the organoid is alive.
+
+        Returns:
+            bool: True if the organoid is alive, False otherwise.
+
+        """
         return self.alive and self.calories > 0
 
     def distance_to(self, other):
+        """
+        Calculate the distance to another object.
+
+        Args:
+            other (BaseObject): Another object.
+
+        Returns:
+            float: The distance to the other object.
+
+        """
         return np.sqrt((self.position[0] - other.position[0])**2 + (self.position[1] - other.position[1])**2)
 
     def update_score(self):
-        self.score = int(50*self.children + 5*self.calories + 10*self.size)
+        """
+        Update the organoid's score.
+
+        """
+        self.last_score = self.score
+        self.score = int(20*self.children + 5*self.calories + 10*self.size)
         
     @property
     def step_size(self):
+        """
+        Get the step size for movement.
+
+        Returns:
+            float: The step size for movement.
+
+        """
         return int(self.size / 2)
     
 class Food(BaseObject):
+    """
+    Food Class.
+
+    This class defines food objects in the simulation.
+
+    Attributes:
+        name (str): The name of the food.
+        size (float): The size of the food (pixel radius).
+        position (tuple): The position of the food.
+        calories (int): The energy level provided by the food.
+        category (int): The category of the food (1 for food).
+
+    Methods:
+        get_info():
+            Get information about the food.
+
+    """
     def __init__(self, name, size, calories, rgb):
+        """
+        Initialize a Food object.
+
+        Args:
+            name (str): The name of the food.
+            size (float): The size of the food (pixel radius).
+            position (tuple): The position of the food.
+            calories (int): The energy level provided by the food.
+            rgb (tuple): The color of the food in RGB format.
+
+        """
         super().__init__(name, size, position=(0,0), rgb=rgb)
         self.name = str(name) or "Pellet"
         self.size = int(size) or 1 # pixel radius
         self.calories = int(calories) or 1 # energy
         self.rgb = tuple(rgb) or (100, 100, 100)
+        self.category = 2
 
     def get_info(self):
+        """
+        Get information about the food.
+
+        Returns:
+            str: Information about the food, including its name and size.
+
+        """
         base_info = super().get_info()
         return f"{base_info}\nCalories: {self.calories:.2f}"
 
@@ -142,14 +562,100 @@ class Food(BaseObject):
         return int(self.size * sum(list(self.rgb)))
 
 class Obstacle(BaseObject):
+    """
+    Obstacle Class.
+
+    This class defines obstacle objects in the simulation.
+
+    Attributes:
+        name (str): The name of the obstacle.
+        size (float): The size of the obstacle (pixel radius).
+        position (tuple): The position of the obstacle.
+        category (int): The category of the obstacle (2 for obstacle).
+
+    Methods:
+        get_info():
+            Get information about the obstacle.
+
+    """
     def __init__(self, name, size, rgb):
+        """
+        Initialize an Obstacle object.
+
+        Args:
+            name (str): The name of the obstacle.
+            size (float): The size of the obstacle (pixel radius).
+            position (tuple): The position of the obstacle.
+            rgb (tuple): The color of the obstacle in RGB format.
+
+        """
         super().__init__(name, size, position=(0,0), rgb=rgb)
         self.name = str(name) or "Rock"
         self.size = int(size) or 1 # pixel radius
         self.rgb = tuple(rgb) or (100, 100, 100)
+        self.category = 1
 
 class World():
+    """
+    World Class.
+
+    This class represents the simulation world, including objects and simulation parameters.
+
+    Attributes:
+        name (str): The name of the world.
+        radius (int): The radius of the world.
+        abundance (float): Abundance factor for food generation.
+        obstacle_ratio (float): Ratio of obstacles to the world size.
+        doomsday_ticker (int): Maximum number of simulation iterations.
+        organoids (list): List of organoid objects.
+        food (list): List of food objects.
+        obstacles (list): List of obstacle objects.
+
+    Methods:
+        __init__(self, name, radius, doomsday_ticker, obstacle_ratio, abundance):
+            Initialize the World object with simulation parameters.
+
+        handle_collisions(self):
+            Handle collisions between organoids, food, and obstacles.
+
+        spawn_continuous_food(self, interval):
+            Spawn food objects continuously at a specified time interval.
+
+        run_simulation(self):
+            Run the simulation, updating the visualization and organoid behaviors.
+
+        spawn_organoids(self, num_organoids, organoid_params):
+            Spawn a specified number of organoids with given parameters.
+
+        spawn_food(self, num_food, food_params):
+            Spawn a specified number of food objects with given parameters.
+
+        spawn_walls(self):
+            Spawn wall obstacles along the perimeter of the world.
+
+        spawn_obstacles(self, num_obstacles, obstacle_params):
+            Spawn a specified number of obstacles with given parameters.
+
+        random_point_in_world(self):
+            Generate a random point within the boundaries of the world.
+
+        simulate_step(self):
+            Simulate a single step of the world, updating organoids, food, and handling collisions.
+
+    """
+
     def __init__(self, name, radius, doomsday_ticker, obstacle_ratio, abundance):
+        """
+        Initialize the World object with simulation parameters.
+
+        Args:
+            name (str): The name of the world.
+            radius (int): The radius of the world.
+            doomsday_ticker (int): Maximum number of simulation iterations.
+            obstacle_ratio (float): Ratio of obstacles to the world size.
+            abundance (float): Abundance factor for food generation.
+
+        """
         self.name = str(name) or "Midgard"
         self.radius = int(radius) or 100
         self.abundance = float(abundance) or 1.00
@@ -160,6 +666,13 @@ class World():
         self.obstacles = []
 
     def handle_collisions(self):
+        """
+        Handle collisions between organoids, food, and obstacles.
+
+        This method checks for collisions between organoids and other objects,
+        including food and obstacles, and handles them accordingly.
+
+        """
         collided_organoids = set()  # To keep track of collided organoids
 
         for organoid in self.organoids:
@@ -187,6 +700,13 @@ class World():
                 mother.split_organoid()
 
     def spawn_continuous_food(self, interval):
+        """
+        Spawn food objects continuously at a specified time interval.
+
+        Args:
+            interval (float): The time interval for spawning food.
+
+        """
         while True:
             time.sleep(interval)
             if len(self.food) < self.abundance:
@@ -195,6 +715,13 @@ class World():
                 self.food.append(food)
 
     def run_simulation(self):
+        """
+        Run the simulation, updating the visualization and organoid behaviors.
+
+        This method initializes the visualization and runs the simulation loop,
+        updating the state of the world and organoids.
+
+        """
         fig, ax = plt.subplots()
         ax.set_xlim(0, 2 * self.radius)
         ax.set_ylim(0, 2 * self.radius)
@@ -214,6 +741,9 @@ class World():
         # Connect the mouse motion event to update_plot function
 
         def update_plot(event=None):
+            """
+            Update the logical plot and visualize.
+            """
             organoids_x = [org.position[0] for org in world.organoids if org is not None]
             organoids_y = [org.position[1] for org in world.organoids if org is not None]
             organoids_size = [np.pi * org.size**2 for org in world.organoids]  # Calculate area as marker size
@@ -267,12 +797,28 @@ class World():
             print(f"Step {i + 1}, organoids: {len(world.organoids)}, Food: {len(world.food)}")
 
     def spawn_organoids(self, num_organoids, organoid_params):
+        """
+        Spawn a specified number of organoids with given parameters.
+
+        Args:
+            num_organoids (int): The number of organoids to spawn.
+            organoid_params (dict): Parameters for configuring the organoids.
+
+        """
         for _ in range(num_organoids):
             organoid = Organoid(**organoid_params)
             organoid.position = self.random_point_in_world()
             self.organoids.append(organoid)
 
     def spawn_food(self, num_food, food_params):
+        """
+        Spawn a specified number of food objects with given parameters.
+
+        Args:
+            num_food (int): The number of food objects to spawn.
+            food_params (dict): Parameters for configuring the food objects.
+
+        """
         food_added = 0
         while food_added < num_food:
             food = Food(**food_params)
@@ -285,6 +831,12 @@ class World():
             food_added += 1
 
     def spawn_walls(self):
+        """
+        Spawn wall obstacles along the perimeter of the world.
+
+        This method creates wall obstacles to enclose the simulation world.
+
+        """
         # Spawn walls along the perimeter of the world
         for x in range(0, 2 * self.radius + 1):
             self.obstacles.append(Obstacle("Wall", 1, (100, 100, 100)))
@@ -299,6 +851,14 @@ class World():
             self.obstacles[-1].position = (2 * self.radius, y)
 
     def spawn_obstacles(self, num_obstacles, obstacle_params):
+        """
+        Spawn a specified number of obstacles with given parameters.
+
+        Args:
+            num_obstacles (int): The number of obstacles to spawn.
+            obstacle_params (dict): Parameters for configuring the obstacles.
+
+        """
         obstacles_added = 0
         while obstacles_added < num_obstacles:
             obstacle = Obstacle(**obstacle_params)
@@ -313,6 +873,13 @@ class World():
             obstacles_added += 1
             
     def random_point_in_world(self):
+        """
+        Generate a random point within the boundaries of the world.
+
+        Returns:
+            tuple: A tuple representing the coordinates of a random point within the world boundaries.
+
+        """
         while True:
             angle = np.random.uniform(0, 2 * np.pi)
             distance = np.random.uniform(0, self.radius)
@@ -324,10 +891,17 @@ class World():
                 return x, y
 
     def simulate_step(self):
+        """
+        Simulate a single step of the world, updating organoids, food, and handling collisions.
+
+        This method represents a single time step in the simulation and updates
+        the state of organoids, food, and handles collisions between objects.
+
+        """
         self.food = [food for food in self.food if food.calories > 0]
         self.organoids = [org for org in self.organoids if org is not None and org.alive]
         for organoid in self.organoids:
-            organoid.update()
+            organoid.update(self.food, self.organoids, self.obstacles)
             if not organoid.is_alive():
                 self.organoids.remove(organoid)
 
@@ -335,21 +909,21 @@ class World():
     
 if __name__ == "__main__":
     # Create the world
-    world = World(name="Midgard", radius=100, doomsday_ticker=10000, obstacle_ratio=0.01, abundance=100.00)
+    world = World(name="Midgard", radius=100, doomsday_ticker=1000, obstacle_ratio=0.01, abundance=100.00)
 
     # Define parameters for organoids and food
-    organoid_params = {"name": "Organoid", "lifespan": 60, "size": 5, "calories": 50, "calorie_limit": 50, "metabolism": 0.01, "rgb": (255, 10, 10), "position": (0, 0)}
+    organoid_params = {"name": "Bactoreimurcillis", "lifespan": 60, "size": 5, "calories": 50, "calorie_limit": 50, "metabolism": 0.01, "rgb": (255, 10, 10), "position": (0, 0)}
     food_params = {"name": "Algae", "size": 2.5, "calories": 200, "rgb": (10, 255, 10)}
     obstacle_params = {"name": "Rock", "size": 7, "rgb": (100, 100, 100)}
 
     # Spawn initial organoids and food
 
-    world.spawn_organoids(num_organoids=5, organoid_params=organoid_params)
     world.spawn_food(num_food=100, food_params=food_params)
     world.spawn_obstacles(5, obstacle_params=obstacle_params)
     world.spawn_walls()
+    world.spawn_organoids(num_organoids=5, organoid_params=organoid_params)
 
-    food_spawn_interval = 1  # Adjust the interval (in seconds) for continuous food spawning
+    food_spawn_interval = 5  # Adjust the interval (in seconds) for continuous food spawning
     food_spawner_thread = threading.Thread(target=world.spawn_continuous_food, args=(food_spawn_interval,))
     food_spawner_thread.start()
 
