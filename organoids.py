@@ -10,7 +10,7 @@ from keras.layers import InputLayer
 from keras.layers import Dense
 from uuid import uuid4
 from itertools import chain
-
+from datetime import datetime
 
 # Categories
 # organoids=3
@@ -40,7 +40,7 @@ class NN:
             Train the neural network based on experiences.
 
     """
-    def __init__(self, discount=0.95, eps=0.5, eps_decay=0.999, hidden_sizes=[20], state_space_size=7, action_space_size=2):
+    def __init__(self, discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[14, 28, 14, 8, 4], state_space_size=7, action_space_size=2):
         """
         Initialize the Neural Network.
 
@@ -188,6 +188,7 @@ class Organoid(BaseObject):
         score (int): The score of the organoid.
         last_score (int): The previous score of the organoid.
         category (int): The category of the organoid (3 for organoid).
+        smart (bool): Indicated whether a "brain" (NN) will  be attached
 
     Methods:
         filter_objs_by_distance(objects):
@@ -230,7 +231,7 @@ class Organoid(BaseObject):
             Property to get the step size for movement.
 
     """
-    def __init__(self, name, lifespan, size, calories, calorie_limit, position, metabolism, rgb):
+    def __init__(self, name, lifespan, size, calories, calorie_limit, position, metabolism, rgb, smart):
         """
         Initialize an Organoid.
 
@@ -264,6 +265,7 @@ class Organoid(BaseObject):
         self.score = 0
         self.last_score = self.score
         self.category = 3
+        self.smart = smart
 
     def filter_objs_by_distance(self, objects):
         """
@@ -299,13 +301,18 @@ class Organoid(BaseObject):
             obstacles (list): List of obstacle objects.
 
         """
-        organoids = [organoid for organoid in organoids if organoid.id != self.id]
-        objects = list(food)
-        objects.extend(obstacles)
-        objects.extend(organoids)
-        objects = self.filter_objs_by_distance(objects)
-        delta_score = self.score - self.last_score
-        self.train_neural_network(delta_score, objects)
+        if self.smart:
+            organoids = [organoid for organoid in organoids if organoid.id != self.id]
+            objects = list(food)
+            objects.extend(obstacles)
+            objects.extend(organoids)
+            objects = self.filter_objs_by_distance(objects)
+            delta_score = self.score - self.last_score
+            self.train_neural_network(delta_score, objects)
+        else:
+            self.move(random.uniform(-1.00, 1.00), random.uniform(-1.00, 1.00))
+            self.metabolize()
+            self.update_score()
         if self.calories <= 0:
             self.alive = False
 
@@ -404,7 +411,7 @@ class Organoid(BaseObject):
             offset_y = random.uniform(-self.size, self.size)
             new_position = (self.position[0] + offset_x, self.position[1] + offset_y)
             new_organoid = Organoid(name=self.name, lifespan=self.lifespan, size=(self.size / 2), calories=(self.calorie_limit / 2),
-                                    calorie_limit=(self.calorie_limit / 2), position=new_position, metabolism=self.metabolism, rgb=self.rgb)
+                                    calorie_limit=(self.calorie_limit / 2), position=new_position, metabolism=self.metabolism, rgb=self.rgb, smart=self.smart)
 
             # Mutate the parameters within 10% of the parent's values (except for size)
             parameter_names = ["lifespan", "calorie_limit", "metabolism", "rgb"]
@@ -418,7 +425,7 @@ class Organoid(BaseObject):
                     )
                     continue
                 min_value = parent_value - (parent_value * self.mutation_rate)
-                max_value = parent_value - (parent_value * self.mutation_rate)
+                max_value = parent_value + (parent_value * self.mutation_rate)
                 random_value = random.uniform(min_value, max_value)
                 setattr(new_organoid, param_name, random_value)
 
@@ -714,6 +721,24 @@ class World():
                 food.position = self.random_point_in_world()
                 self.food.append(food)
 
+    def generate_score_card(self):
+        scores = list()
+        for o in self.organoids:
+            scores.append(
+                {
+                    "id":f"{o.id}",
+                    "score":f"{o.score}",
+                    "name":f"{o.name}",
+                    "size":f"{o.size}",
+                    "calories":f"{o.calories}",
+                    "max_calories":f"{o.calorie_limit}",
+                    "children":f"{o.children}"
+                }
+            )
+        scorecard = pd.DataFrame.from_records(scores)
+        scorecard.to_csv(f"organoid_sim_{str(int(datetime.now().timestamp()))}.csv")
+        return scorecard
+    
     def run_simulation(self):
         """
         Run the simulation, updating the visualization and organoid behaviors.
@@ -795,6 +820,9 @@ class World():
             update_plot()
             time.sleep(0.005)
             print(f"Step {i + 1}, organoids: {len(world.organoids)}, Food: {len(world.food)}")
+        return self.generate_score_card()
+        
+        
 
     def spawn_organoids(self, num_organoids, organoid_params):
         """
@@ -909,19 +937,42 @@ class World():
     
 if __name__ == "__main__":
     # Create the world
-    world = World(name="Midgard", radius=100, doomsday_ticker=1000, obstacle_ratio=0.01, abundance=100.00)
+    world = World(name="Midgard", radius=100, doomsday_ticker=500, obstacle_ratio=0.01, abundance=100.00)
 
     # Define parameters for organoids and food
-    organoid_params = {"name": "Bactoreimurcillis", "lifespan": 60, "size": 5, "calories": 50, "calorie_limit": 50, "metabolism": 0.01, "rgb": (255, 10, 10), "position": (0, 0)}
-    food_params = {"name": "Algae", "size": 2.5, "calories": 200, "rgb": (10, 255, 10)}
-    obstacle_params = {"name": "Rock", "size": 7, "rgb": (100, 100, 100)}
+    organoid_params = {
+        "name": "Silly Blob", 
+        "lifespan": 60, 
+        "size": 5, 
+        "calories": 50, 
+        "calorie_limit": 50, 
+        "metabolism": 0.01, 
+        "rgb": (255, 10, 10), 
+        "position": (0, 0), 
+        "smart": False
+    }
+    evolved_params = organoid_params.copy()
+    evolved_params["smart"] = True
+    evolved_params["name"] = "Brainy Blob"
+    food_params = {
+        "name": "Algae", 
+        "size": 2.5, 
+        "calories": 200, 
+        "rgb": (10, 255, 10)
+    }
+    obstacle_params = {
+        "name": "Rock", 
+        "size": 7, 
+        "rgb": (100, 100, 100)
+    }
 
     # Spawn initial organoids and food
 
     world.spawn_food(num_food=100, food_params=food_params)
     world.spawn_obstacles(5, obstacle_params=obstacle_params)
     world.spawn_walls()
-    world.spawn_organoids(num_organoids=5, organoid_params=organoid_params)
+    world.spawn_organoids(num_organoids=2, organoid_params=organoid_params)
+    world.spawn_organoids(num_organoids=2, organoid_params=evolved_params)
 
     food_spawn_interval = 5  # Adjust the interval (in seconds) for continuous food spawning
     food_spawner_thread = threading.Thread(target=world.spawn_continuous_food, args=(food_spawn_interval,))
@@ -929,3 +980,4 @@ if __name__ == "__main__":
 
     # Kick off visualization
     world.run_simulation()
+    food_spawner_thread.join()
