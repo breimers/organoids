@@ -754,7 +754,7 @@ class World():
 
     """
 
-    def __init__(self, name, radius, doomsday_ticker, obstacle_ratio, abundance):
+    def __init__(self, name, radius, doomsday_ticker, obstacle_ratio, abundance, show):
         """
         Initialize the World object with simulation parameters.
 
@@ -775,6 +775,7 @@ class World():
         self.organoids = []
         self.food = []
         self.obstacles = []
+        self.show = show
 
     def handle_collisions(self):
         """
@@ -852,23 +853,23 @@ class World():
         updating the state of the world and organoids.
 
         """
-        fig, ax = plt.subplots()
-        ax.set_xlim(0, 2 * self.radius)
-        ax.set_ylim(0, 2 * self.radius)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        organoids_scatter = ax.scatter([], [], c='red', marker='o', s=50, label='Organoids')
-        food_scatter = ax.scatter([], [], c='green', marker='s', s=20, label='Food')
-        obstacle_scatter = ax.scatter([], [], c='gray', marker='^', s=20, label='Obstacles')
-        ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
-        ax.set_title(self.world_run_id)
+        if self.show:
+            fig, ax = plt.subplots()
+            ax.set_xlim(0, 2 * self.radius)
+            ax.set_ylim(0, 2 * self.radius)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            organoids_scatter = ax.scatter([], [], c='red', marker='o', s=50, label='Organoids')
+            food_scatter = ax.scatter([], [], c='green', marker='s', s=20, label='Food')
+            obstacle_scatter = ax.scatter([], [], c='gray', marker='^', s=20, label='Obstacles')
+            ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+            ax.set_title(self.world_run_id)
+            text = ax.text(0, 0, '', fontsize=8, ha='center', va='center', color='black', visible=False)
+
+        # Connect the mouse motion event to update_plot function
         def normalize_rgb(rgb):
             # Normalize RGB values to range [0, 1]
             return tuple(comp / 255.0 for comp in rgb)
-
-        text = ax.text(0, 0, '', fontsize=8, ha='center', va='center', color='black', visible=False)
-
-        # Connect the mouse motion event to update_plot function
 
         def update_plot(event=None):
             """
@@ -916,13 +917,15 @@ class World():
                     text.set_visible(False)
 
             plt.pause(0.001)
-            
-        fig.canvas.mpl_connect('motion_notify_event', lambda event: update_plot(event))
+        
+        if self.show:    
+            fig.canvas.mpl_connect('motion_notify_event', lambda event: update_plot(event))
         
         # The main thread continues with the simulation
         for i in range(self.doomsday_ticker):
             world.simulate_step()
-            update_plot()
+            if self.show:
+                update_plot()
             time.sleep(0.005)
             print(f"Step {i + 1}, organoids: {len(world.organoids)}, Food: {len(world.food)}")
         return self.generate_score_card()
@@ -1042,7 +1045,7 @@ class World():
     
 if __name__ == "__main__":
     # Create the world
-    world = World(name="Midgard", radius=100, doomsday_ticker=500, obstacle_ratio=0.01, abundance=50.00)
+    world = World(name="Midgard", radius=100, doomsday_ticker=500, obstacle_ratio=0.01, abundance=50.00, show=True)
 
     # Define parameters for organoids and food
     organoid_params = {
