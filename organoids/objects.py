@@ -41,7 +41,7 @@ class BaseObject:
 
     """
 
-    def __init__(self, name="obj", size=1, position=(0, 0), rgb=(0, 0, 0)):
+    def __init__(self, name="obj", size=1, position=(0, 0), rgb=(0, 0, 0), category=0):
         """
         Initialize a BaseObject.
 
@@ -57,7 +57,7 @@ class BaseObject:
         self.size = float(size) or 1.0
         self.position = tuple(position) or (0.0, 0.0)
         self.rgb = tuple(rgb) or (100, 100, 100)
-        self.category = 0
+        self.category = category
 
     def get_info(self):
         """
@@ -167,17 +167,13 @@ class Organoid(BaseObject):
             rgb (tuple): The color of the organoid in RGB format.
 
         """
-        super().__init__(name, size, position, rgb)
-        self.name = str(name) or "Organoid"
+        super().__init__(name, size, position, rgb, 3)
         self.lifespan = 0
         self.max_lifespan = int(lifespan) or 100
-        self.size = float(size) or 2  # pixel radius
         self.calories = int(calories) or 100  # energy
         self.calorie_limit = int(calorie_limit) or 100
-        self.position = tuple(position) or (0, 0)
         self.metabolism = float(metabolism) or 0.05
         self.alive = True
-        self.rgb = tuple(rgb) or (100, 100, 100)
         self.reproduction_cooldown = 0
         self.cooldown_duration = int(cooldown_duration) or 500
         self.mutation_rate = 0.2
@@ -185,7 +181,6 @@ class Organoid(BaseObject):
         self.children = 0
         self.score = 0
         self.last_score = self.score
-        self.category = 3
         self.smart = smart
         self.modeltype = modeltype
         if self.smart and self.modeltype:
@@ -511,12 +506,8 @@ class Food(BaseObject):
             rgb (tuple): The color of the food in RGB format.
 
         """
-        super().__init__(name, size, position=(0, 0), rgb=rgb)
-        self.name = str(name) or "Pellet"
-        self.size = int(size) or 1  # pixel radius
+        super().__init__(name, size, (0,0), rgb, 2)
         self.calories = int(calories) or 1  # energy
-        self.rgb = tuple(rgb) or (100, 100, 100)
-        self.category = 2
 
     def get_info(self):
         """
@@ -563,8 +554,4 @@ class Obstacle(BaseObject):
             rgb (tuple): The color of the obstacle in RGB format.
 
         """
-        super().__init__(name, size, position=(0, 0), rgb=rgb)
-        self.name = str(name) or "Rock"
-        self.size = int(size) or 1  # pixel radius
-        self.rgb = tuple(rgb) or (100, 100, 100)
-        self.category = 1
+        super().__init__(name, size, (0, 0), rgb, 1)

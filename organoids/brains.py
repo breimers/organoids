@@ -76,13 +76,22 @@ class NN:
         self.action_space_size = action_space_size
         self.buffer = deque(maxlen=buffer_size)
         self.batch_size = int(buffer_size * 0.2)
-        self.model = Sequential()
-        self.model.add(InputLayer((self.state_space_size)))
-        for size in hidden_sizes:
-            self.model.add(Dense(size, activation="relu"))
-        self.model.add(Dense(action_space_size, activation="linear"))
-        self.model.compile(loss="mse", optimizer="adam", metrics=["mae"])
+        self.model = self.build_network()
 
+        
+    def build_network(self):
+        """
+        Builds the base model for training
+
+        """
+        model = Sequential()
+        model.add(InputLayer((self.state_space_size)))
+        for size in self.hidden_sizes:
+            model.add(Dense(size, activation="relu"))
+        model.add(Dense(self.action_space_size, activation="linear"))
+        model.compile(loss="mse", optimizer="adam", metrics=["mae"])
+        return model
+    
     def choose_action(self, state):
         """
         Choose an action for the given state.
@@ -215,17 +224,11 @@ class DQN(NN):
             buffer_size (int, optional): Maximum size of the replay buffer (default: 20).
 
         """
-        self.batch_size = int(buffer_size * 0.2)
-        self.discount = discount
-        self.eps = eps
-        self.eps_decay = eps_decay
-        self.hidden_sizes = hidden_sizes
-        self.model = self.build_q_network(state_space_size, action_space_size)
-        self.q_model = self.build_q_network(state_space_size, action_space_size)
-        self.buffer = deque(maxlen=buffer_size)
+        super().__init__(discount, eps, eps_decay, hidden_sizes, state_space_size, action_space_size, buffer_size)
+        self.q_model = self.build_network()
         self.update_q_model()
 
-    def build_q_network(self, state_size, action_size):
+    def build_network(self):
         """
         Build a Q-network model with specified input and output dimensions.
 
@@ -238,12 +241,12 @@ class DQN(NN):
 
         """
         model = Sequential()
-        model.add(InputLayer(input_shape=(state_size,)))
+        model.add(InputLayer(input_shape=(self.state_space_size,)))
         # Add hidden layers
         for size in self.hidden_sizes:
             model.add(Dense(size, activation="relu"))
         # Output layer with linear activation (Q-values)
-        model.add(Dense(action_size, activation="linear"))
+        model.add(Dense(self.action_space_size, activation="linear"))
         model.compile(optimizer="adam", loss="mse")
         return model
 
