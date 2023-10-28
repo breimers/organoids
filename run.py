@@ -75,11 +75,11 @@ if __name__ == "__main__":
     world.spawn_organoids(num_organoids=1, organoid_params=evolved_params)
     world.spawn_organoids(num_organoids=1, organoid_params=new_evolved_params)
 
-    food_spawn_interval = (
-        5  # Adjust the interval (in seconds) for continuous food spawning
+    FOOD_SPAWN_INTERVAL = (
+        5  # Adjust the interval (in steps) for continuous food spawning
     )
     food_spawner_thread = threading.Thread(
-        target=world.spawn_continuous_food, args=(food_spawn_interval, food_params)
+        target=world.spawn_continuous_food, args=(FOOD_SPAWN_INTERVAL, food_params)
     )
     food_spawner_thread.start()
 
