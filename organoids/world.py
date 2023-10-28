@@ -388,7 +388,8 @@ class World:
         Generate a random point within the boundaries of the self.
 
         Returns:
-            tuple: A tuple representing the coordinates of a random point within the world boundaries.
+            tuple: A tuple representing the coordinates of a random point within the world 
+                boundaries.
 
         """
         while True:
@@ -415,14 +416,12 @@ class World:
         ]
         for organoid in self.organoids:
             organoid.update(self.food, self.organoids, self.obstacles)
-            # Check if the potential new position is within the world boundaries
             if (
                 0 <= organoid.position[0] <= 2 * self.radius
                 and 0 <= organoid.position[1] <= 2 * self.radius
             ):
                 organoid.position = (organoid.position[0], organoid.position[1])
             else:
-                # If the potential new position is outside the bounds, move the organoid to the center
                 organoid.position = (self.radius, self.radius)
             if not organoid.is_alive():
                 self.organoids.remove(organoid)
