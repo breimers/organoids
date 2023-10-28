@@ -15,5 +15,5 @@ The organoids module contains five classes of objects:
  - Food: resources required to grow and sustain organoids
  - World: simulated ecosystem, configurable with varying size, abundance, replishment, and obstacles
 
-To run the simulation, edit the values under the `if __name__ == "__main"` section, and then in your terminal `python3 ./organoids.py`.
+To run the simulation, edit the values in `run.py` and execute.
 
