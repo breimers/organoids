@@ -1045,7 +1045,7 @@ class World():
     
 if __name__ == "__main__":
     # Create the world
-    world = World(name="Midgard", radius=100, doomsday_ticker=500, obstacle_ratio=0.01, abundance=50.00, show=True)
+    world = World(name="Midgard", radius=100, doomsday_ticker=500, obstacle_ratio=0.01, abundance=100.00, show=True)
 
     # Define parameters for organoids and food
     organoid_params = {
@@ -1082,8 +1082,8 @@ if __name__ == "__main__":
 
     # Spawn initial organoids and food
 
-    world.spawn_food(num_food=50, food_params=food_params)
-    world.spawn_obstacles(10, obstacle_params=obstacle_params)
+    world.spawn_food(num_food=100, food_params=food_params)
+    world.spawn_obstacles(5, obstacle_params=obstacle_params)
     world.spawn_walls()
     world.spawn_organoids(num_organoids=2, organoid_params=organoid_params)
     world.spawn_organoids(num_organoids=1, organoid_params=evolved_params)
