@@ -1,5 +1,5 @@
 # organoids
-NN powered Ecosim Automata
+NN powered Ecosim
 
 # about
 
