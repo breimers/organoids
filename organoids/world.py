@@ -1,3 +1,17 @@
+"""
+Worlds
+=======
+
+Contains classes and methods for building a simulated worldspace.
+
+Classes:
+    World: Represents the simulation world, including objects and simulation parameters.
+
+Author: Bradley Reimers
+Date: 10/28/2023
+License: GPL 3
+"""
+
 import time
 from datetime import datetime
 import pandas as pd
@@ -5,7 +19,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .objects import Organoid, Food, Obstacle
 
-class World():
+
+class World:
     """
     World Class.
 
@@ -97,12 +112,18 @@ class World():
                         # Bounce the organoid away from the obstacle
                         x_diff = organoid.position[0] - obstacle.position[0]
                         y_diff = organoid.position[1] - obstacle.position[1]
-                        organoid.position = (organoid.position[0] + 5 * x_diff, organoid.position[1] + 5 * y_diff)
+                        organoid.position = (
+                            organoid.position[0] + 5 * x_diff,
+                            organoid.position[1] + 5 * y_diff,
+                        )
                 # Check for collisions between organoids
                 for other in self.organoids:
-                    if organoid != other and organoid.distance_to(other) <= organoid.size + other.size:
+                    if (
+                        organoid != other
+                        and organoid.distance_to(other) <= organoid.size + other.size
+                    ):
                         collided_organoids.add(organoid)
-                        collided_organoids.add(other)                
+                        collided_organoids.add(other)
         # Create new organoids for the collided ones
         if collided_organoids:
             mother = next(iter(collided_organoids))
@@ -130,21 +151,21 @@ class World():
             if o is not None:
                 scores.append(
                     {
-                        "id":f"{o.id}",
-                        "score":f"{o.score}",
-                        "name":f"{o.name}",
-                        "size":f"{o.size}",
-                        "modeltype":f"{o.modeltype}",
-                        "calories":f"{o.calories}",
-                        "max_calories":f"{o.calorie_limit}",
-                        "children":f"{o.children}",
-                        "lifespan":f"{o.lifespan}"
+                        "id": f"{o.id}",
+                        "score": f"{o.score}",
+                        "name": f"{o.name}",
+                        "size": f"{o.size}",
+                        "modeltype": f"{o.modeltype}",
+                        "calories": f"{o.calories}",
+                        "max_calories": f"{o.calorie_limit}",
+                        "children": f"{o.children}",
+                        "lifespan": f"{o.lifespan}",
                     }
                 )
         scorecard = pd.DataFrame.from_records(scores)
         scorecard.to_csv(self.world_run_id + ".csv")
         return scorecard
-    
+
     def run_simulation(self):
         """
         Run the simulation, updating the visualization and organoid behaviors.
@@ -159,12 +180,31 @@ class World():
             ax.set_ylim(0, 2 * self.radius)
             ax.set_xticks([])
             ax.set_yticks([])
-            organoids_scatter = ax.scatter([], [], c='red', marker='o', s=50, label='Organoids')
-            food_scatter = ax.scatter([], [], c='green', marker='s', s=20, label='Food')
-            obstacle_scatter = ax.scatter([], [], c='gray', marker='^', s=20, label='Obstacles')
-            ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+            organoids_scatter = ax.scatter(
+                [], [], c="red", marker="o", s=50, label="Organoids"
+            )
+            food_scatter = ax.scatter([], [], c="green", marker="s", s=20, label="Food")
+            obstacle_scatter = ax.scatter(
+                [], [], c="gray", marker="^", s=20, label="Obstacles"
+            )
+            ax.legend(
+                loc="upper center",
+                bbox_to_anchor=(0.5, -0.05),
+                fancybox=True,
+                shadow=True,
+                ncol=5,
+            )
             ax.set_title(self.world_run_id)
-            text = ax.text(0, 0, '', fontsize=8, ha='center', va='center', color='black', visible=False)
+            text = ax.text(
+                0,
+                0,
+                "",
+                fontsize=8,
+                ha="center",
+                va="center",
+                color="black",
+                visible=False,
+            )
 
         # Connect the mouse motion event to update_plot function
         def normalize_rgb(rgb):
@@ -176,26 +216,50 @@ class World():
             Update the logical plot and visualize.
             """
             if len(self.organoids) >= 1:
-                organoids_x = [org.position[0] for org in self.organoids if org is not None]
-                organoids_y = [org.position[1] for org in self.organoids if org is not None]
-                organoids_size = [np.pi * org.size**2 for org in self.organoids if org is not None]  # Calculate area as marker size
-                organoids_colors = [normalize_rgb(org.rgb) for org in self.organoids if org is not None]
-                organoids_scatter.set_offsets(np.column_stack((organoids_x, organoids_y)))
-                organoids_scatter.set_sizes(organoids_size)  # Set the new sizes based on the area
+                organoids_x = [
+                    org.position[0] for org in self.organoids if org is not None
+                ]
+                organoids_y = [
+                    org.position[1] for org in self.organoids if org is not None
+                ]
+                organoids_size = [
+                    np.pi * org.size**2 for org in self.organoids if org is not None
+                ]  # Calculate area as marker size
+                organoids_colors = [
+                    normalize_rgb(org.rgb) for org in self.organoids if org is not None
+                ]
+                organoids_scatter.set_offsets(
+                    np.column_stack((organoids_x, organoids_y))
+                )
+                organoids_scatter.set_sizes(
+                    organoids_size
+                )  # Set the new sizes based on the area
                 organoids_scatter.set_color(organoids_colors)
             if len(self.food) >= 1:
                 food_x = [food.position[0] for food in self.food if food is not None]
                 food_y = [food.position[1] for food in self.food if food is not None]
-                food_size = [np.pi * food.size**2 for food in self.food if food is not None]
-                food_colors = [normalize_rgb(food.rgb) for food in self.food if food is not None]
+                food_size = [
+                    np.pi * food.size**2 for food in self.food if food is not None
+                ]
+                food_colors = [
+                    normalize_rgb(food.rgb) for food in self.food if food is not None
+                ]
                 food_scatter.set_offsets(np.column_stack((food_x, food_y)))
                 food_scatter.set_sizes(food_size)
                 food_scatter.set_color(food_colors)  # Set normalized colors
             if len(self.obstacles) >= 1:
-                obstacle_x = [obs.position[0] for obs in self.obstacles if obs is not None]
-                obstacle_y = [obs.position[1] for obs in self.obstacles if obs is not None]
-                obstacle_size = [np.pi * obs.size**2 for obs in self.obstacles if obs is not None]
-                obstacle_colors = [normalize_rgb(obs.rgb) for obs in self.obstacles if obs is not None]
+                obstacle_x = [
+                    obs.position[0] for obs in self.obstacles if obs is not None
+                ]
+                obstacle_y = [
+                    obs.position[1] for obs in self.obstacles if obs is not None
+                ]
+                obstacle_size = [
+                    np.pi * obs.size**2 for obs in self.obstacles if obs is not None
+                ]
+                obstacle_colors = [
+                    normalize_rgb(obs.rgb) for obs in self.obstacles if obs is not None
+                ]
                 obstacle_scatter.set_offsets(np.column_stack((obstacle_x, obstacle_y)))
                 obstacle_scatter.set_sizes(obstacle_size)
                 obstacle_scatter.set_color(obstacle_colors)  # Set normalized colors
@@ -218,19 +282,22 @@ class World():
                     text.set_visible(False)
 
             plt.pause(0.001)
-        
-        if self.show:    
-            fig.canvas.mpl_connect('motion_notify_event', lambda event: update_plot(event))
-        
+
+        if self.show:
+            fig.canvas.mpl_connect(
+                "motion_notify_event", lambda event: update_plot(event)
+            )
+
         # The main thread continues with the simulation
         for i in range(self.doomsday_ticker):
             self.simulate_step()
             if self.show:
                 update_plot()
             time.sleep(0.005)
-            print(f"Step {i + 1}, organoids: {len(self.organoids)}, Food: {len(self.food)}")
+            print(
+                f"Step {i + 1}, organoids: {len(self.organoids)}, Food: {len(self.food)}"
+            )
         return self.generate_score_card()
-        
 
     def spawn_organoids(self, num_organoids, organoid_params):
         """
@@ -260,8 +327,12 @@ class World():
             food = Food(**food_params)
             food.position = self.random_point_in_world()
             # Check if the obstacle position is within the world boundary
-            if food.position[0] >= self.radius*2 - food.size or food.position[0] <= food.size or \
-               food.position[1] >= self.radius*2 - food.size or food.position[1] <= food.size:
+            if (
+                food.position[0] >= self.radius * 2 - food.size
+                or food.position[0] <= food.size
+                or food.position[1] >= self.radius * 2 - food.size
+                or food.position[1] <= food.size
+            ):
                 continue
             self.food.append(food)
             food_added += 1
@@ -301,13 +372,17 @@ class World():
             obstacle.position = self.random_point_in_world()
 
             # Check if the obstacle position is within the world boundary
-            if obstacle.position[0] >= self.radius*2 - obstacle.size or obstacle.position[0] <= obstacle.size or \
-               obstacle.position[1] >= self.radius*2 - obstacle.size or obstacle.position[1] <= obstacle.size:
+            if (
+                obstacle.position[0] >= self.radius * 2 - obstacle.size
+                or obstacle.position[0] <= obstacle.size
+                or obstacle.position[1] >= self.radius * 2 - obstacle.size
+                or obstacle.position[1] <= obstacle.size
+            ):
                 continue
 
             self.obstacles.append(obstacle)
             obstacles_added += 1
-            
+
     def random_point_in_world(self):
         """
         Generate a random point within the boundaries of the self.
@@ -335,11 +410,16 @@ class World():
 
         """
         self.food = [food for food in self.food if food.calories > 0]
-        self.organoids = [org for org in self.organoids if org is not None and org.alive]
+        self.organoids = [
+            org for org in self.organoids if org is not None and org.alive
+        ]
         for organoid in self.organoids:
             organoid.update(self.food, self.organoids, self.obstacles)
             # Check if the potential new position is within the world boundaries
-            if 0 <= organoid.position[0] <= 2 * self.radius and 0 <= organoid.position[1] <= 2 * self.radius:
+            if (
+                0 <= organoid.position[0] <= 2 * self.radius
+                and 0 <= organoid.position[1] <= 2 * self.radius
+            ):
                 organoid.position = (organoid.position[0], organoid.position[1])
             else:
                 # If the potential new position is outside the bounds, move the organoid to the center

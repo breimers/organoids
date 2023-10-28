@@ -15,8 +15,7 @@ Usage:
     and call the `run_simulation()` method. The simulation can be customized with different parameters.
 
 Authors:
-    - [Your Name]
-    - [Collaborator Names]
+    - Bradley Reimers
 
 Version:
     Organoids Project v1.0

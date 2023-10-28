@@ -1,3 +1,17 @@
+"""
+Brains
+=======
+
+Contains classes and methods for building neural networks.
+
+Classes:
+    NN:  Traditional Neural Network with arbitrary amount of hidden layers and a training buffer
+    DQN: Deep Q Network with an arbitrary amount of hidden layers and a training buffer
+
+Author: Bradley Reimers
+Date: 10/28/2023
+License: GPL 3
+"""
 import random
 from collections import deque
 import numpy as np
@@ -7,6 +21,7 @@ from keras.layers import Dense
 from keras.utils import disable_interactive_logging
 
 disable_interactive_logging()
+
 
 class NN:
     """
@@ -30,14 +45,17 @@ class NN:
             Train the neural network based on experiences.
 
     """
+
     def __init__(
-        self, 
-        discount=0.95, 
-        eps=0.3, eps_decay=0.95, 
-        hidden_sizes=[64, 32, 48, 16, 8, 4], 
-        state_space_size=46, action_space_size=2,
-        buffer_size=20
-        ):
+        self,
+        discount=0.95,
+        eps=0.3,
+        eps_decay=0.95,
+        hidden_sizes=[64, 32, 48, 16, 8, 4],
+        state_space_size=46,
+        action_space_size=2,
+        buffer_size=20,
+    ):
         """
         Initialize the Neural Network.
 
@@ -57,13 +75,13 @@ class NN:
         self.state_space_size = state_space_size
         self.action_space_size = action_space_size
         self.buffer = deque(maxlen=buffer_size)
-        self.batch_size = int(buffer_size*0.2)
+        self.batch_size = int(buffer_size * 0.2)
         self.model = Sequential()
         self.model.add(InputLayer((self.state_space_size)))
         for size in hidden_sizes:
-            self.model.add(Dense(size, activation='relu'))
-        self.model.add(Dense(action_space_size, activation='linear'))
-        self.model.compile(loss='mse', optimizer='adam', metrics=['mae'])
+            self.model.add(Dense(size, activation="relu"))
+        self.model.add(Dense(action_space_size, activation="linear"))
+        self.model.compile(loss="mse", optimizer="adam", metrics=["mae"])
 
     def choose_action(self, state):
         """
@@ -73,7 +91,8 @@ class NN:
             state (numpy.ndarray): The current state.
 
         Returns:
-            tuple: A tuple of two discrete float values between -1 and 1 representing the chosen action.
+            tuple: A tuple of two discrete float values between -1 and 1 representing the 
+                chosen action.
 
         """
         self.eps *= self.eps_decay
@@ -84,7 +103,7 @@ class NN:
             # Exploit: choose the action with the highest Q-value
             x, y = self.model(state, training=False)[0]
             mean = (abs(x) + abs(y)) / 2
-            return (min([max([x/mean, -1]), 1]), min([max([y/mean, -1]), 1]))
+            return (min([max([x / mean, -1]), 1]), min([max([y / mean, -1]), 1]))
 
     def train(self, state, action, reward, new_state):
         """
@@ -115,23 +134,29 @@ class NN:
                 targets.append(target_f)
 
             # Train the model on the batch of experiences
-            self.model.fit(np.array(states).reshape(-1, self.state_space_size), np.array(targets).reshape(-1, self.action_space_size), epochs=1, verbose=0)
+            self.model.fit(
+                np.array(states).reshape(-1, self.state_space_size),
+                np.array(targets).reshape(-1, self.action_space_size),
+                epochs=1,
+                verbose=0,
+            )
 
         # Implement DQN training here
         # Update the Q-values based on the Bellman equation
         target = reward + self.discount * np.max(self.model.predict(new_state))
         model_output = self.model.predict(state)
-        
+
         # Copy the model's prediction
         target_f = model_output.copy()
-        
+
         # Update all elements in the action space
         target_f[0] = model_output[0]
-        
+
         # Set the first action element to the target
         target_f[0][0] = target
-        
+
         self.model.fit(state, target_f, epochs=1, verbose=0)
+
 
 class DQN(NN):
     """
@@ -143,14 +168,16 @@ class DQN(NN):
         discount (float): Discount factor for future rewards (default: 0.95).
         eps (float): Epsilon value for epsilon-greedy exploration (default: 0.3).
         eps_decay (float): Epsilon decay rate (default: 0.95).
-        hidden_sizes (list): List of integers, specifying the sizes of hidden layers (default: [64, 32, 48, 16, 8, 4]).
+        hidden_sizes (list): List of integers, specifying the sizes of hidden layers 
+            (default: [64, 32, 48, 16, 8, 4]).
         state_space_size (int): Dimension of the state space (default: 46).
         action_space_size (int): Dimension of the action space (default: 2).
         buffer_size (int): Maximum size of the replay buffer (default: 20).
 
     Methods:
-        __init__(self, discount=0.95, eps=0.3, eps_decay=0.95, hidden_sizes=[64, 32, 48, 16, 8, 4],
-                 state_space_size=46, action_space_size=2, buffer_size=20):
+        __init__(self, discount=0.95, eps=0.3, eps_decay=0.95, 
+            hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=46, 
+              action_space_size=2, buffer_size=20):
             Initialize the DQN with the provided hyperparameters.
 
         build_q_network(self, state_size, action_size):
@@ -163,14 +190,17 @@ class DQN(NN):
             Train the DQN using experiences from the replay buffer.
 
     """
+
     def __init__(
-        self, 
-        discount=0.95, 
-        eps=0.3, eps_decay=0.95, 
-        hidden_sizes=[64, 32, 48, 16, 8, 4], 
-        state_space_size=46, action_space_size=2,
+        self,
+        discount=0.95,
+        eps=0.3,
+        eps_decay=0.95,
+        hidden_sizes=[64, 32, 48, 16, 8, 4],
+        state_space_size=46,
+        action_space_size=2,
         buffer_size=20,
-        ):
+    ):
         """
         Initialize the DQN with the provided hyperparameters.
 
@@ -178,13 +208,14 @@ class DQN(NN):
             discount (float, optional): Discount factor for future rewards (default: 0.95).
             eps (float, optional): Epsilon value for epsilon-greedy exploration (default: 0.3).
             eps_decay (float, optional): Epsilon decay rate (default: 0.95).
-            hidden_sizes (list, optional): List of integers, specifying the sizes of hidden layers (default: [64, 32, 48, 16, 8, 4]).
+            hidden_sizes (list, optional): List of integers, specifying the sizes of hidden layers 
+                (default: [64, 32, 48, 16, 8, 4]).
             state_space_size (int, optional): Dimension of the state space (default: 46).
             action_space_size (int, optional): Dimension of the action space (default: 2).
             buffer_size (int, optional): Maximum size of the replay buffer (default: 20).
 
         """
-        self.batch_size=int(buffer_size * 0.2)
+        self.batch_size = int(buffer_size * 0.2)
         self.discount = discount
         self.eps = eps
         self.eps_decay = eps_decay
@@ -210,10 +241,10 @@ class DQN(NN):
         model.add(InputLayer(input_shape=(state_size,)))
         # Add hidden layers
         for size in self.hidden_sizes:
-            model.add(Dense(size, activation='relu'))
+            model.add(Dense(size, activation="relu"))
         # Output layer with linear activation (Q-values)
-        model.add(Dense(action_size, activation='linear'))
-        model.compile(optimizer='adam', loss='mse')
+        model.add(Dense(action_size, activation="linear"))
+        model.compile(optimizer="adam", loss="mse")
         return model
 
     def update_q_model(self):
@@ -244,14 +275,18 @@ class DQN(NN):
 
         # Calculate the target Q-values using the target network
         target_q_values = self.q_model.predict(next_states)
-        max_target_q_values = np.max(target_q_values, axis=1)  # Calculate the maximum Q-value for each sample
+        max_target_q_values = np.max(
+            target_q_values, axis=1
+        )  # Calculate the maximum Q-value for each sample
 
         # Calculate the online network's Q-values for the current states
         current_q_values = self.model.predict(states)
 
         # Update the Q-values for the taken actions
         for i in range(self.batch_size):
-            current_q_values[i][actions[i]] = rewards[i] + self.discount * max_target_q_values[i]
+            current_q_values[i][actions[i]] = (
+                rewards[i] + self.discount * max_target_q_values[i]
+            )
 
         # Train the online network on the mini-batch
         self.model.fit(states, current_q_values, verbose=0)

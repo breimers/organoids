@@ -1,3 +1,19 @@
+"""
+Objects
+=======
+
+Contains obejcts and methods for populating worldspace.
+
+Classes:
+    BaseObject: defines a base object with common attributes and methods for other objects
+    Organoid: defines organoid objects, which are agents in the simulation
+    Food: defines food objects in the simulation which are consumed by Organoids
+    Obstacle: defines obstacle objects in the simulation that must be avoided by Organoids
+    
+Author: Bradley Reimers
+Date: 10/28/2023
+License: GPL 3
+"""
 import random
 from uuid import uuid4
 import numpy as np
@@ -8,7 +24,8 @@ class BaseObject:
     """
     Base Object Class.
 
-    This class defines a base object with common attributes and methods for other objects in the simulation.
+    This class defines a base object with common attributes and methods for other objects
+        in the simulation.
 
     Attributes:
         name (str): The name of the object.
@@ -23,7 +40,8 @@ class BaseObject:
             Get information about the object.
 
     """
-    def __init__(self, name="obj", size=1, position=(0,0), rgb=(0, 0, 0)):
+
+    def __init__(self, name="obj", size=1, position=(0, 0), rgb=(0, 0, 0)):
         """
         Initialize a BaseObject.
 
@@ -50,6 +68,7 @@ class BaseObject:
 
         """
         return f"{self.name}\nSize: {self.size:.2f}"
+
 
 class Organoid(BaseObject):
     """
@@ -119,7 +138,21 @@ class Organoid(BaseObject):
             Property to get the step size for movement.
 
     """
-    def __init__(self, name, lifespan, size, calories, calorie_limit, position, metabolism, rgb, smart, cooldown_duration, modeltype):
+
+    def __init__(
+        self,
+        name,
+        lifespan,
+        size,
+        calories,
+        calorie_limit,
+        position,
+        metabolism,
+        rgb,
+        smart,
+        cooldown_duration,
+        modeltype,
+    ):
         """
         Initialize an Organoid.
 
@@ -138,10 +171,10 @@ class Organoid(BaseObject):
         self.name = str(name) or "Organoid"
         self.lifespan = 0
         self.max_lifespan = int(lifespan) or 100
-        self.size = float(size) or 2 # pixel radius
-        self.calories = int(calories) or 100 # energy
+        self.size = float(size) or 2  # pixel radius
+        self.calories = int(calories) or 100  # energy
         self.calorie_limit = int(calorie_limit) or 100
-        self.position = tuple(position) or (0,0)
+        self.position = tuple(position) or (0, 0)
         self.metabolism = float(metabolism) or 0.05
         self.alive = True
         self.rgb = tuple(rgb) or (100, 100, 100)
@@ -156,9 +189,9 @@ class Organoid(BaseObject):
         self.smart = smart
         self.modeltype = modeltype
         if self.smart and self.modeltype:
-            if self.modeltype == 'NN':
+            if self.modeltype == "NN":
                 self.brain = NN()
-            if self.modeltype == 'DQN':
+            if self.modeltype == "DQN":
                 self.brain = DQN()
 
     def filter_objs_by_distance(self, objects):
@@ -179,12 +212,12 @@ class Organoid(BaseObject):
                     {
                         "x-position": object.position[0],
                         "y-position": object.position[1],
-                        "size": object.size, 
+                        "size": object.size,
                         "category": object.category,
                     }
                 )
         return new_obj_list
-    
+
     def update(self, food, organoids, obstacles):
         """
         Update the organoid's state.
@@ -207,7 +240,7 @@ class Organoid(BaseObject):
             self.move(random.uniform(-1.00, 1.00), random.uniform(-1.00, 1.00))
             self.metabolize()
             self.update_score()
-        self.lifespan +=1
+        self.lifespan += 1
         if self.calories <= 0:
             self.alive = False
         if self.lifespan >= self.max_lifespan:
@@ -226,28 +259,37 @@ class Organoid(BaseObject):
         max_objects = 10  # Adjust this based on your requirements
 
         # Create arrays to hold the object representations and their counts
-        object_representations = np.zeros((max_objects, 4), dtype=float)  # Assuming 4 attributes per object
+        object_representations = np.zeros(
+            (max_objects, 4), dtype=float
+        )  # Assuming 4 attributes per object
         object_counts = min(len(objects), max_objects)
 
         # Flatten attributes for each object
         for i in range(object_counts):
             obj = objects[i]
-            object_representations[i] = [obj["category"], obj["size"], obj["x-position"], obj["y-position"]]
+            object_representations[i] = [
+                obj["category"],
+                obj["size"],
+                obj["x-position"],
+                obj["y-position"],
+            ]
 
         # Fill any remaining slots with zeros
         for i in range(object_counts, max_objects):
             object_representations[i] = [0, 0, 0, 0]
 
         # Construct the state and action arrays
-        state = np.array([
-            self.calories, 
-            self.size, 
-            self.position[0], 
-            self.position[1], 
-            delta_score,
-            *object_representations.flatten(),
-            self.reproduction_cooldown,
-        ]).reshape(1, -1)
+        state = np.array(
+            [
+                self.calories,
+                self.size,
+                self.position[0],
+                self.position[1],
+                delta_score,
+                *object_representations.flatten(),
+                self.reproduction_cooldown,
+            ]
+        ).reshape(1, -1)
 
         action = self.brain.choose_action(state)
 
@@ -260,15 +302,17 @@ class Organoid(BaseObject):
         # Calculate reward (using delta_score as reward)
         reward = self.score - self.last_score
 
-        new_state = np.array([
-            self.calories, 
-            self.size, 
-            self.position[0], 
-            self.position[1], 
-            reward,
-            *object_representations.flatten(),
-            self.reproduction_cooldown,
-        ]).reshape(1, -1)
+        new_state = np.array(
+            [
+                self.calories,
+                self.size,
+                self.position[0],
+                self.position[1],
+                reward,
+                *object_representations.flatten(),
+                self.reproduction_cooldown,
+            ]
+        ).reshape(1, -1)
 
         self.brain.train(state, action, reward, new_state)
 
@@ -280,22 +324,27 @@ class Organoid(BaseObject):
             str: Information about the organoid, including its name and current state.
 
         """
-        base_info = super().get_info()
-        return f"Name: {self.name}\nSize: {self.size:.2f}\nCalories: {int(self.calories)}/{self.calorie_limit}\nScore: {self.score}"
+        return f"Name: {self.name}\
+                \nSize: {self.size:.2f}\
+                \nCalories: {int(self.calories)}/{self.calorie_limit}\
+                \nScore: {self.score}"
 
     def metabolize(self):
         """
         Perform metabolism and potentially grow.
 
         """
-        # This checks if the organoid has excess calories, if so, grow and increase the calorie limit.
+        # This checks if the organoid has excess calories, if so, grow and increase
+        #  the calorie limit.
         if self.calories > self.calorie_limit:
             diff = self.calories - self.calorie_limit
             self.calories = self.calorie_limit  # Cap the calories at the limit
-            self.size += diff * 0.001  # Increase the organoid size by a fraction of the excess calories
+            self.size += (
+                diff * 0.001
+            )  # Increase the organoid size by a fraction of the excess calories
 
         self.calories -= self.metabolism * (self.size / 4)
-        
+
     def split_organoid(self):
         """
         Split the organoid to create offspring.
@@ -306,8 +355,19 @@ class Organoid(BaseObject):
             offset_x = random.uniform(-self.size, self.size)
             offset_y = random.uniform(-self.size, self.size)
             new_position = (self.position[0] + offset_x, self.position[1] + offset_y)
-            new_organoid = Organoid(name=self.name, lifespan=self.lifespan, size=(self.size / 2), calories=(self.calorie_limit / 2),
-                                    calorie_limit=(self.calorie_limit / 2), position=new_position, metabolism=self.metabolism, rgb=self.rgb, smart=self.smart, modeltype=self.modeltype, cooldown_duration=self.cooldown_duration)
+            new_organoid = Organoid(
+                name=self.name,
+                lifespan=self.lifespan,
+                size=(self.size / 2),
+                calories=(self.calorie_limit / 2),
+                calorie_limit=(self.calorie_limit / 2),
+                position=new_position,
+                metabolism=self.metabolism,
+                rgb=self.rgb,
+                smart=self.smart,
+                modeltype=self.modeltype,
+                cooldown_duration=self.cooldown_duration,
+            )
 
             # Mutate the parameters within 10% of the parent's values (except for size)
             new_organoid.lifespan = self.max_lifespan
@@ -316,9 +376,18 @@ class Organoid(BaseObject):
                 parent_value = getattr(self, param_name)
                 if param_name == "rgb":
                     new_organoid.rgb = (
-                        random.uniform(parent_value[0] - (parent_value[0] * self.mutation_rate), parent_value[0] + (parent_value[0] * self.mutation_rate)),
-                        random.uniform(parent_value[1] - (parent_value[1] * self.mutation_rate), parent_value[1] + (parent_value[1] * self.mutation_rate)),
-                        random.uniform(parent_value[2] - (parent_value[2] * self.mutation_rate), parent_value[2] + (parent_value[2] * self.mutation_rate))
+                        random.uniform(
+                            parent_value[0] - (parent_value[0] * self.mutation_rate),
+                            parent_value[0] + (parent_value[0] * self.mutation_rate),
+                        ),
+                        random.uniform(
+                            parent_value[1] - (parent_value[1] * self.mutation_rate),
+                            parent_value[1] + (parent_value[1] * self.mutation_rate),
+                        ),
+                        random.uniform(
+                            parent_value[2] - (parent_value[2] * self.mutation_rate),
+                            parent_value[2] + (parent_value[2] * self.mutation_rate),
+                        ),
                     )
                     continue
                 min_value = parent_value - (parent_value * self.mutation_rate)
@@ -331,7 +400,7 @@ class Organoid(BaseObject):
             if new_organoid.is_alive():
                 self.children += 1
                 return new_organoid
-            
+
     def update_cooldown(self):
         """
         Update the reproduction cooldown.
@@ -340,7 +409,7 @@ class Organoid(BaseObject):
         # Decrease the reproduction cooldown timer (if greater than zero)
         if self.reproduction_cooldown > 0:
             self.reproduction_cooldown -= 1
-            
+
     def move(self, x_off, y_off):
         """
         Move the organoid.
@@ -350,8 +419,8 @@ class Organoid(BaseObject):
             y_off (float): Offset for the Y-axis.
 
         """
-        new_x = self.position[0] + x_off*self.step_size
-        new_y = self.position[1] + y_off*self.step_size
+        new_x = self.position[0] + x_off * self.step_size
+        new_y = self.position[1] + y_off * self.step_size
         self.position = (new_x, new_y)
 
     def consume_food(self, food):
@@ -386,7 +455,10 @@ class Organoid(BaseObject):
             float: The distance to the other object.
 
         """
-        return np.sqrt((self.position[0] - other.position[0])**2 + (self.position[1] - other.position[1])**2)
+        return np.sqrt(
+            (self.position[0] - other.position[0]) ** 2
+            + (self.position[1] - other.position[1]) ** 2
+        )
 
     def update_score(self):
         """
@@ -394,8 +466,8 @@ class Organoid(BaseObject):
 
         """
         self.last_score = self.score
-        self.score = int(20*self.children + 5*self.calories + 10*self.size)
-        
+        self.score = int(20 * self.children + 5 * self.calories + 10 * self.size)
+
     @property
     def step_size(self):
         """
@@ -406,7 +478,8 @@ class Organoid(BaseObject):
 
         """
         return int(self.size / 2)
-    
+
+
 class Food(BaseObject):
     """
     Food Class.
@@ -425,6 +498,7 @@ class Food(BaseObject):
             Get information about the food.
 
     """
+
     def __init__(self, name, size, calories, rgb):
         """
         Initialize a Food object.
@@ -437,10 +511,10 @@ class Food(BaseObject):
             rgb (tuple): The color of the food in RGB format.
 
         """
-        super().__init__(name, size, position=(0,0), rgb=rgb)
+        super().__init__(name, size, position=(0, 0), rgb=rgb)
         self.name = str(name) or "Pellet"
-        self.size = int(size) or 1 # pixel radius
-        self.calories = int(calories) or 1 # energy
+        self.size = int(size) or 1  # pixel radius
+        self.calories = int(calories) or 1  # energy
         self.rgb = tuple(rgb) or (100, 100, 100)
         self.category = 2
 
@@ -459,6 +533,7 @@ class Food(BaseObject):
     def visibility(self):
         return int(self.size * sum(list(self.rgb)))
 
+
 class Obstacle(BaseObject):
     """
     Obstacle Class.
@@ -476,6 +551,7 @@ class Obstacle(BaseObject):
             Get information about the obstacle.
 
     """
+
     def __init__(self, name, size, rgb):
         """
         Initialize an Obstacle object.
@@ -487,8 +563,8 @@ class Obstacle(BaseObject):
             rgb (tuple): The color of the obstacle in RGB format.
 
         """
-        super().__init__(name, size, position=(0,0), rgb=rgb)
+        super().__init__(name, size, position=(0, 0), rgb=rgb)
         self.name = str(name) or "Rock"
-        self.size = int(size) or 1 # pixel radius
+        self.size = int(size) or 1  # pixel radius
         self.rgb = tuple(rgb) or (100, 100, 100)
         self.category = 1
