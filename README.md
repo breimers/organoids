@@ -3,7 +3,7 @@ NN powered Ecosim Automata
 
 # about
 
-This is a passion project of mine to create an open-source ecosim/automata powered by a flexible NN architecture.
+This is a passion project of mine to create an open-source ecosim powered by a flexible NN architecture.
 While it's currently a simple implementation, it may serve as the base for more complex projects in the future.
 
 # getting started
