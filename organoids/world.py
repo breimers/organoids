@@ -151,15 +151,16 @@ class World:
             if o is not None:
                 scores.append(
                     {
-                        "id": f"{o.id}",
-                        "score": f"{o.score}",
-                        "name": f"{o.name}",
-                        "size": f"{o.size}",
-                        "modeltype": f"{o.modeltype}",
-                        "calories": f"{o.calories}",
-                        "max_calories": f"{o.calorie_limit}",
-                        "children": f"{o.children}",
-                        "lifespan": f"{o.lifespan}",
+                        "id": o.id,
+                        "score": o.score,
+                        "name": o.name,
+                        "size": o.size,
+                        "calories": o.calories,
+                        "max_calories": o.calorie_limit,
+                        "children": o.children,
+                        "lifespan": o.lifespan,
+                        "modeltype": o.modeltype,
+                        "hidden_layers": o.hidden_layers,
                     }
                 )
         scorecard = pd.DataFrame.from_records(scores)

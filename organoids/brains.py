@@ -51,7 +51,7 @@ class NN:
         discount=0.95,
         eps=0.3,
         eps_decay=0.95,
-        hidden_sizes=[64, 32, 48, 16, 8, 4],
+        hidden_sizes=[32, 8, 16, 4],
         state_space_size=46,
         action_space_size=2,
         buffer_size=20,

@@ -149,9 +149,10 @@ class Organoid(BaseObject):
         position,
         metabolism,
         rgb,
-        smart,
         cooldown_duration,
+        smart,
         modeltype,
+        hidden_layers
     ):
         """
         Initialize an Organoid.
@@ -183,11 +184,12 @@ class Organoid(BaseObject):
         self.last_score = self.score
         self.smart = smart
         self.modeltype = modeltype
-        if self.smart and self.modeltype:
+        self.hidden_layers = hidden_layers
+        if self.smart:
             if self.modeltype == "NN":
-                self.brain = NN()
+                self.brain = NN(hidden_sizes=self.hidden_layers)
             if self.modeltype == "DQN":
-                self.brain = DQN()
+                self.brain = DQN(hidden_sizes=self.hidden_layers)
 
     def filter_objs_by_distance(self, objects):
         """
@@ -209,6 +211,7 @@ class Organoid(BaseObject):
                         "y-position": object.position[1],
                         "size": object.size,
                         "category": object.category,
+                        "name": object.name
                     }
                 )
         return new_obj_list
@@ -340,6 +343,41 @@ class Organoid(BaseObject):
 
         self.calories -= self.metabolism * (self.size / 4)
 
+    def mutate_layers(self):
+        """
+        Mutate a list of integers based on the mutation rate.
+
+        Args:
+            layer_list (list): A list of integers to be mutated.
+
+        Returns:
+            list: The mutated list of integers.
+        """
+        mutated_list = self.hidden_layers[:]  # Create a copy of the original list
+
+        # Iterate through the list and apply mutations
+        for i in range(len(mutated_list)):
+            if random.random() < self.mutation_rate:
+                # There is a mutation_rate chance of modifying this value
+                if random.random() < 0.5:
+                    # 50% chance of increasing the value
+                    mutation_amount = (self.mutation_rate * mutated_list[i])  # Increase by mutation rate percentage
+                else:
+                    # 50% chance of decreasing the value
+                    mutation_amount = 0 - (self.mutation_rate * mutated_list[i])  # Decrease by mutation rate percentage
+                mutated_list[i] = round(mutated_list[i] + mutation_amount)
+        if random.random() < self.mutation_rate:
+            # There is a mutation_rate chance of dropping an integer from the list
+            if len(mutated_list) > 2:
+                index = random.randint(0, len(mutated_list) - 1)
+                if random.random() < 0.5:
+                    mutated_list.pop(index)
+                else:
+                    mutated_list.insert(index, mutated_list[index])
+            else:
+                mutated_list.append(mutated_list[0])
+        return mutated_list
+
     def split_organoid(self):
         """
         Split the organoid to create offspring.
@@ -361,9 +399,9 @@ class Organoid(BaseObject):
                 rgb=self.rgb,
                 smart=self.smart,
                 modeltype=self.modeltype,
+                hidden_layers=self.mutate_layers(),
                 cooldown_duration=self.cooldown_duration,
             )
-
             # Mutate the parameters within 10% of the parent's values (except for size)
             new_organoid.lifespan = self.max_lifespan
             parameter_names = ["max_lifespan", "calorie_limit", "metabolism", "rgb"]

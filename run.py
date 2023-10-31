@@ -36,7 +36,7 @@ if __name__ == "__main__":
     world = World(
         name="Midgard",
         radius=100,
-        doomsday_ticker=100,
+        doomsday_ticker=500,
         obstacle_ratio=0.01,
         abundance=100.00,
         show=True,
@@ -53,8 +53,9 @@ if __name__ == "__main__":
         "rgb": (255, 10, 10),
         "position": (0, 0),
         "smart": False,
-        "cooldown_duration": 100,
+        "cooldown_duration": 20,
         "modeltype": None,
+        "hidden_layers": [32, 8, 16, 4],
     }
     evolved_params = organoid_params.copy()
     evolved_params["smart"] = True
