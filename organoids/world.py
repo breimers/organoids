@@ -8,7 +8,7 @@ Classes:
     World: Represents the simulation world, including objects and simulation parameters.
 
 Author: Bradley Reimers
-Date: 10/28/2023
+Date: 11/19/2023
 License: GPL 3
 """
 

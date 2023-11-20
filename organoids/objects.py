@@ -11,7 +11,7 @@ Classes:
     Obstacle: defines obstacle objects in the simulation that must be avoided by Organoids
     
 Author: Bradley Reimers
-Date: 10/28/2023
+Date: 11/19/2023
 License: GPL 3
 """
 import random

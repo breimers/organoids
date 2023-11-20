@@ -9,7 +9,7 @@ Classes:
     DQN: Deep Q Network with an arbitrary amount of hidden layers and a training buffer
 
 Author: Bradley Reimers
-Date: 10/28/2023
+Date: 11/19/2023
 License: GPL 3
 """
 import random
