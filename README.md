@@ -17,3 +17,10 @@ The organoids module contains five classes of objects:
 
 To run the simulation, edit the values in `run.py` and execute.
 
+# example
+
+```bash
+pip install -r requirements.txt
+python ./run.py
+```
+![](./organoids.gif)
