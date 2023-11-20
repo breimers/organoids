@@ -57,29 +57,29 @@ if __name__ == "__main__":
         "modeltype": None,
         "hidden_layers": [32, 8, 16, 4],
     }
-    
+
     nn_organoid_params = organoid_params.copy()
     nn_organoid_params["smart"] = True
     nn_organoid_params["name"] = "Brainy Blob"
     nn_organoid_params["modeltype"] = "NN"
     nn_organoid_params["rgb"] = (10, 10, 255)
-    
+
     dqn_organoid_params = nn_organoid_params.copy()
     dqn_organoid_params["name"] = "Learny Blob"
     dqn_organoid_params["modeltype"] = "DQN"
     dqn_organoid_params["rgb"] = (128, 10, 128)
-    
+
     cnn_organoid_params = nn_organoid_params.copy()
     cnn_organoid_params["name"] = "Clever Blob"
     cnn_organoid_params["modeltype"] = "CNN"
     cnn_organoid_params["hidden_layers"] = [32, 32]
     cnn_organoid_params["rgb"] = (10, 128, 128)
-    
+
     dqcnn_organoid_params = cnn_organoid_params.copy()
     dqcnn_organoid_params["name"] = "Magic Blob"
     dqcnn_organoid_params["modeltype"] = "DQCNN"
     dqcnn_organoid_params["rgb"] = (47, 152, 161)
-    
+
     organoid_pops = [
         (1, organoid_params),
         (1, nn_organoid_params),
@@ -92,11 +92,13 @@ if __name__ == "__main__":
     # Spawn initial organoids and food
 
     world.spawn_food(num_food=world.abundance, food_params=food_params)
-    world.spawn_obstacles(world.obstacle_ratio*world.abundance, obstacle_params=obstacle_params)
+    world.spawn_obstacles(
+        world.obstacle_ratio * world.abundance, obstacle_params=obstacle_params
+    )
     world.spawn_walls()
     for pop, params in organoid_pops:
         world.spawn_organoids(num_organoids=pop, organoid_params=params)
-    
+
     FOOD_SPAWN_INTERVAL = (
         5  # Adjust the interval (in steps) for continuous food spawning
     )

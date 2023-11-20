@@ -87,7 +87,9 @@ class World:
         self.obstacle_ratio = float(obstacle_ratio) or 0.01
         self.doomsday_ticker = int(doomsday_ticker) or 100000
         self.step = 0
-        self.world_run_id = f"organoid_sim_{name}_{str(int(datetime.now().timestamp()))}"
+        self.world_run_id = (
+            f"organoid_sim_{name}_{str(int(datetime.now().timestamp()))}"
+        )
         self.organoids = []
         self.food = []
         self.obstacles = []
@@ -299,7 +301,7 @@ class World:
         # The main thread continues with the simulation
         try:
             for i in range(self.doomsday_ticker):
-                self.step = i +1 
+                self.step = i + 1
                 self.simulate_step()
                 if self.show:
                     update_plot()
@@ -400,7 +402,7 @@ class World:
         Generate a random point within the boundaries of the self.
 
         Returns:
-            tuple: A tuple representing the coordinates of a random point within the world 
+            tuple: A tuple representing the coordinates of a random point within the world
                 boundaries.
 
         """

@@ -152,7 +152,7 @@ class Organoid(BaseObject):
         cooldown_duration,
         smart,
         modeltype,
-        hidden_layers
+        hidden_layers,
     ):
         """
         Initialize an Organoid.
@@ -188,7 +188,9 @@ class Organoid(BaseObject):
         self.hidden_layers = hidden_layers
         if self.smart:
             if self.modeltype in MODEL_SELECTOR.keys():
-                self.brain = MODEL_SELECTOR[self.modeltype](hidden_sizes=self.hidden_layers)
+                self.brain = MODEL_SELECTOR[self.modeltype](
+                    hidden_sizes=self.hidden_layers
+                )
             else:
                 self.brain = MODEL_SELECTOR["NN"](hidden_sizes=self.hidden_layers)
         else:
@@ -214,7 +216,7 @@ class Organoid(BaseObject):
                         "y-position": object.position[1],
                         "size": object.size,
                         "category": object.category,
-                        "name": object.name
+                        "name": object.name,
                     }
                 )
         return new_obj_list
@@ -367,10 +369,14 @@ class Organoid(BaseObject):
                 # There is a mutation_rate chance of modifying this value
                 if random.random() < 0.5:
                     # 50% chance of increasing the value
-                    mutation_amount = (self.mutation_rate * mutated_list[i])  # Increase by mutation rate percentage
+                    mutation_amount = (
+                        self.mutation_rate * mutated_list[i]
+                    )  # Increase by mutation rate percentage
                 else:
                     # 50% chance of decreasing the value
-                    mutation_amount = 0 - (self.mutation_rate * mutated_list[i])  # Decrease by mutation rate percentage
+                    mutation_amount = 0 - (
+                        self.mutation_rate * mutated_list[i]
+                    )  # Decrease by mutation rate percentage
                 mutated_list[i] = round(mutated_list[i] + mutation_amount)
         if random.random() < self.mutation_rate:
             # There is a mutation_rate chance of dropping an integer from the list
@@ -550,7 +556,7 @@ class Food(BaseObject):
             rgb (tuple): The color of the food in RGB format.
 
         """
-        super().__init__(name, size, (0,0), rgb, 2)
+        super().__init__(name, size, (0, 0), rgb, 2)
         self.calories = int(calories) or 1  # energy
 
     def get_info(self):

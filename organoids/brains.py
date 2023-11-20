@@ -77,7 +77,6 @@ class NN:
         self.batch_size = int(buffer_size * 0.2)
         self.model = self.build_network()
 
-        
     def build_network(self):
         """
         Builds the base model for training
@@ -90,7 +89,7 @@ class NN:
         model.add(Dense(self.action_space_size, activation="linear"))
         model.compile(loss="mse", optimizer="adam", metrics=["mae"])
         return model
-    
+
     def choose_action(self, state):
         """
         Choose an action for the given state.
@@ -99,7 +98,7 @@ class NN:
             state (numpy.ndarray): The current state.
 
         Returns:
-            tuple: A tuple of two discrete float values between -1 and 1 representing the 
+            tuple: A tuple of two discrete float values between -1 and 1 representing the
                 chosen action.
 
         """
@@ -176,15 +175,15 @@ class DQN(NN):
         discount (float): Discount factor for future rewards (default: 0.95).
         eps (float): Epsilon value for epsilon-greedy exploration (default: 0.3).
         eps_decay (float): Epsilon decay rate (default: 0.95).
-        hidden_sizes (list): List of integers, specifying the sizes of hidden layers 
+        hidden_sizes (list): List of integers, specifying the sizes of hidden layers
             (default: [64, 32, 48, 16, 8, 4]).
         state_space_size (int): Dimension of the state space (default: 47).
         action_space_size (int): Dimension of the action space (default: 2).
         buffer_size (int): Maximum size of the replay buffer (default: 20).
 
     Methods:
-        __init__(self, discount=0.95, eps=0.3, eps_decay=0.95, 
-            hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=47, 
+        __init__(self, discount=0.95, eps=0.3, eps_decay=0.95,
+            hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=47,
               action_space_size=2, buffer_size=20):
             Initialize the DQN with the provided hyperparameters.
 
@@ -216,14 +215,22 @@ class DQN(NN):
             discount (float, optional): Discount factor for future rewards (default: 0.95).
             eps (float, optional): Epsilon value for epsilon-greedy exploration (default: 0.3).
             eps_decay (float, optional): Epsilon decay rate (default: 0.95).
-            hidden_sizes (list, optional): List of integers, specifying the sizes of hidden layers 
+            hidden_sizes (list, optional): List of integers, specifying the sizes of hidden layers
                 (default: [64, 32, 48, 16, 8, 4]).
             state_space_size (int, optional): Dimension of the state space (default: 47).
             action_space_size (int, optional): Dimension of the action space (default: 2).
             buffer_size (int, optional): Maximum size of the replay buffer (default: 20).
 
         """
-        super().__init__(discount, eps, eps_decay, hidden_sizes, state_space_size, action_space_size, buffer_size)
+        super().__init__(
+            discount,
+            eps,
+            eps_decay,
+            hidden_sizes,
+            state_space_size,
+            action_space_size,
+            buffer_size,
+        )
         self.q_model = self.build_network()
         self.update_q_model()
 
@@ -297,7 +304,6 @@ class DQN(NN):
         self.update_q_model()
 
 
-
 class CNN(NN):
     """
     Convolutional Neural Network for Organoid Agents.
@@ -363,11 +369,13 @@ class CNN(NN):
         model = Sequential()
 
         # Reshape the input to (1, 47)
-        model.add(Reshape((self.state_space_size, 1), input_shape=(self.state_space_size,)))
+        model.add(
+            Reshape((self.state_space_size, 1), input_shape=(self.state_space_size,))
+        )
 
         # Add convolutional layers
         for layer in self.hidden_sizes:
-            model.add(Conv1D(layer, kernel_size=3, activation='relu'))
+            model.add(Conv1D(layer, kernel_size=3, activation="relu"))
 
         # Flatten before dense layers
         model.add(Flatten())
@@ -382,12 +390,9 @@ class CNN(NN):
         model.compile(loss="mse", optimizer="adam", metrics=["mae"])
         return model
 
+
 class DQCNN(DQN):
     build_network = CNN.build_network
 
-MODEL_SELECTOR = {
-    "NN": NN,
-    "DQN": DQN,
-    "CNN": CNN,
-    "DQCNN": DQCNN
-}
+
+MODEL_SELECTOR = {"NN": NN, "DQN": DQN, "CNN": CNN, "DQCNN": DQCNN}
