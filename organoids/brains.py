@@ -16,8 +16,7 @@ import random
 from collections import deque
 import numpy as np
 from keras.models import Sequential
-from keras.layers import InputLayer
-from keras.layers import Dense
+from keras.layers import InputLayer, Conv1D, Flatten, Dense, Reshape
 from keras.utils import disable_interactive_logging
 
 disable_interactive_logging()
@@ -52,7 +51,7 @@ class NN:
         eps=0.3,
         eps_decay=0.95,
         hidden_sizes=[32, 8, 16, 4],
-        state_space_size=46,
+        state_space_size=47,
         action_space_size=2,
         buffer_size=20,
     ):
@@ -179,13 +178,13 @@ class DQN(NN):
         eps_decay (float): Epsilon decay rate (default: 0.95).
         hidden_sizes (list): List of integers, specifying the sizes of hidden layers 
             (default: [64, 32, 48, 16, 8, 4]).
-        state_space_size (int): Dimension of the state space (default: 46).
+        state_space_size (int): Dimension of the state space (default: 47).
         action_space_size (int): Dimension of the action space (default: 2).
         buffer_size (int): Maximum size of the replay buffer (default: 20).
 
     Methods:
         __init__(self, discount=0.95, eps=0.3, eps_decay=0.95, 
-            hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=46, 
+            hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=47, 
               action_space_size=2, buffer_size=20):
             Initialize the DQN with the provided hyperparameters.
 
@@ -206,7 +205,7 @@ class DQN(NN):
         eps=0.3,
         eps_decay=0.95,
         hidden_sizes=[64, 32, 48, 16, 8, 4],
-        state_space_size=46,
+        state_space_size=47,
         action_space_size=2,
         buffer_size=20,
     ):
@@ -219,7 +218,7 @@ class DQN(NN):
             eps_decay (float, optional): Epsilon decay rate (default: 0.95).
             hidden_sizes (list, optional): List of integers, specifying the sizes of hidden layers 
                 (default: [64, 32, 48, 16, 8, 4]).
-            state_space_size (int, optional): Dimension of the state space (default: 46).
+            state_space_size (int, optional): Dimension of the state space (default: 47).
             action_space_size (int, optional): Dimension of the action space (default: 2).
             buffer_size (int, optional): Maximum size of the replay buffer (default: 20).
 
@@ -296,3 +295,99 @@ class DQN(NN):
 
         # Update the target network periodically
         self.update_q_model()
+
+
+
+class CNN(NN):
+    """
+    Convolutional Neural Network for Organoid Agents.
+
+    This class defines a convolutional neural network used by organoid agents to make decisions.
+
+    Attributes:
+        discount (float): Discount factor for future rewards.
+        eps (float): Exploration rate.
+        eps_decay (float): Rate at which exploration rate decays.
+        state_space_size (int): Dimension of the state space.
+        action_space_size (int): Dimension of the action space.
+        model (Sequential): Keras Sequential model for the neural network.
+
+    Methods (inherited):
+        choose_action(state):
+            Choose an action for the given state.
+
+        train(state, action, reward, new_state):
+            Train the neural network based on experiences.
+
+    """
+
+    def __init__(
+        self,
+        discount=0.95,
+        eps=0.3,
+        eps_decay=0.95,
+        hidden_sizes=[32, 64],
+        state_space_size=47,
+        action_space_size=2,
+        buffer_size=20,
+    ):
+        """
+        Initialize the Convolutional Neural Network.
+
+        Args:
+            discount (float, optional): Discount factor for future rewards. Default is 0.95.
+            eps (float, optional): Exploration rate. Default is 0.5.
+            eps_decay (float, optional): Rate at which exploration rate decays. Default is 0.999.
+            conv_params (list, optional): List of convolutional layer parameters.
+            dense_sizes (list, optional): List of dense layer sizes.
+            state_space_size (int, optional): Dimension of the state space. Default is 47.
+            action_space_size (int, optional): Dimension of the action space. Default is 2.
+
+        """
+        super().__init__(
+            discount=discount,
+            eps=eps,
+            eps_decay=eps_decay,
+            hidden_sizes=hidden_sizes,
+            state_space_size=state_space_size,
+            action_space_size=action_space_size,
+            buffer_size=buffer_size,
+        )
+        self.model = self.build_network()
+
+    def build_network(self):
+        """
+        Builds the CNN model for training.
+
+        """
+        model = Sequential()
+
+        # Reshape the input to (1, 47)
+        model.add(Reshape((self.state_space_size, 1), input_shape=(self.state_space_size,)))
+
+        # Add convolutional layers
+        for layer in self.hidden_sizes:
+            model.add(Conv1D(layer, kernel_size=3, activation='relu'))
+
+        # Flatten before dense layers
+        model.add(Flatten())
+
+        # Add dense layers
+        for size in [2 * self.hidden_sizes[-1], self.hidden_sizes[-1]]:
+            model.add(Dense(size, activation="relu"))
+
+        # Output layer
+        model.add(Dense(self.action_space_size, activation="linear"))
+
+        model.compile(loss="mse", optimizer="adam", metrics=["mae"])
+        return model
+
+class DQCNN(DQN):
+    build_network = CNN.build_network
+
+MODEL_SELECTOR = {
+    "NN": NN,
+    "DQN": DQN,
+    "CNN": CNN,
+    "DQCNN": DQCNN
+}

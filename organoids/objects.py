@@ -17,7 +17,7 @@ License: GPL 3
 import random
 from uuid import uuid4
 import numpy as np
-from .brains import NN, DQN
+from .brains import MODEL_SELECTOR
 
 
 class BaseObject:
@@ -101,7 +101,7 @@ class Organoid(BaseObject):
         filter_objs_by_distance(objects):
             Filter objects within the organoid's vision range.
 
-        update(food, organoids, obstacles):
+        update(food, organoids, obstacles, step):
             Update the organoid's state.
 
         train_neural_network(delta_score, objects):
@@ -179,6 +179,7 @@ class Organoid(BaseObject):
         self.cooldown_duration = int(cooldown_duration) or 500
         self.mutation_rate = 0.2
         self.vision_range = 10
+        self.vision_factor = 2.5
         self.children = 0
         self.score = 0
         self.last_score = self.score
@@ -186,10 +187,12 @@ class Organoid(BaseObject):
         self.modeltype = modeltype
         self.hidden_layers = hidden_layers
         if self.smart:
-            if self.modeltype == "NN":
-                self.brain = NN(hidden_sizes=self.hidden_layers)
-            if self.modeltype == "DQN":
-                self.brain = DQN(hidden_sizes=self.hidden_layers)
+            if self.modeltype in MODEL_SELECTOR.keys():
+                self.brain = MODEL_SELECTOR[self.modeltype](hidden_sizes=self.hidden_layers)
+            else:
+                self.brain = MODEL_SELECTOR["NN"](hidden_sizes=self.hidden_layers)
+        else:
+            self.brain = None
 
     def filter_objs_by_distance(self, objects):
         """
@@ -216,7 +219,7 @@ class Organoid(BaseObject):
                 )
         return new_obj_list
 
-    def update(self, food, organoids, obstacles):
+    def update(self, food, organoids, obstacles, step):
         """
         Update the organoid's state.
 
@@ -233,7 +236,7 @@ class Organoid(BaseObject):
             objects.extend(organoids)
             objects = self.filter_objs_by_distance(objects)
             delta_score = self.score - self.last_score
-            self.train_neural_network(delta_score, objects)
+            self.train_neural_network(delta_score, objects, step)
         else:
             self.move(random.uniform(-1.00, 1.00), random.uniform(-1.00, 1.00))
             self.metabolize()
@@ -244,13 +247,14 @@ class Organoid(BaseObject):
         if self.lifespan >= self.max_lifespan:
             self.alive = False
 
-    def train_neural_network(self, delta_score, objects):
+    def train_neural_network(self, delta_score, objects, step):
         """
         Train the neural network based on experiences.
 
         Args:
             delta_score (int): The change in the organoid's score.
             objects (list): List of objects within the organoid's vision range.
+            step (int): Time vector
 
         """
         # Determine the maximum number of objects to consider
@@ -286,6 +290,7 @@ class Organoid(BaseObject):
                 delta_score,
                 *object_representations.flatten(),
                 self.reproduction_cooldown,
+                step,
             ]
         ).reshape(1, -1)
 
@@ -309,6 +314,7 @@ class Organoid(BaseObject):
                 reward,
                 *object_representations.flatten(),
                 self.reproduction_cooldown,
+                step,
             ]
         ).reshape(1, -1)
 
@@ -340,7 +346,7 @@ class Organoid(BaseObject):
             self.size += (
                 diff * 0.001
             )  # Increase the organoid size by a fraction of the excess calories
-
+        self.vision_range = self.vision_factor * self.size
         self.calories -= self.metabolism * (self.size / 4)
 
     def mutate_layers(self):
@@ -390,7 +396,7 @@ class Organoid(BaseObject):
             new_position = (self.position[0] + offset_x, self.position[1] + offset_y)
             new_organoid = Organoid(
                 name=self.name,
-                lifespan=self.lifespan,
+                lifespan=0,
                 size=(self.size / 2),
                 calories=(self.calorie_limit / 2),
                 calorie_limit=(self.calorie_limit / 2),
@@ -403,7 +409,7 @@ class Organoid(BaseObject):
                 cooldown_duration=self.cooldown_duration,
             )
             # Mutate the parameters within 10% of the parent's values (except for size)
-            new_organoid.lifespan = self.max_lifespan
+            new_organoid.max_lifespan = self.max_lifespan
             parameter_names = ["max_lifespan", "calorie_limit", "metabolism", "rgb"]
             for param_name in parameter_names:
                 parent_value = getattr(self, param_name)

@@ -86,7 +86,8 @@ class World:
         self.abundance = float(abundance) or 1.00
         self.obstacle_ratio = float(obstacle_ratio) or 0.01
         self.doomsday_ticker = int(doomsday_ticker) or 100000
-        self.world_run_id = f"organoid_sim_{str(int(datetime.now().timestamp()))}"
+        self.step = 0
+        self.world_run_id = f"organoid_sim_{name}_{str(int(datetime.now().timestamp()))}"
         self.organoids = []
         self.food = []
         self.obstacles = []
@@ -147,7 +148,9 @@ class World:
 
     def generate_score_card(self):
         scores = list()
-        for o in self.organoids:
+        all_organoids = self.organoids.copy()
+        all_organoids.extend(self.dead_organoids.copy())
+        for o in all_organoids:
             if o is not None:
                 scores.append(
                     {
@@ -155,6 +158,7 @@ class World:
                         "score": o.score,
                         "name": o.name,
                         "size": o.size,
+                        "alive": o.alive,
                         "calories": o.calories,
                         "max_calories": o.calorie_limit,
                         "children": o.children,
@@ -164,8 +168,11 @@ class World:
                     }
                 )
         scorecard = pd.DataFrame.from_records(scores)
-        scorecard.to_csv(self.world_run_id + ".csv")
         return scorecard
+
+    def print_scorecard(self):
+        self.scorecard = self.generate_score_card()
+        self.scorecard.to_csv(f"{self.world_run_id}.csv")
 
     def run_simulation(self):
         """
@@ -290,15 +297,19 @@ class World:
             )
 
         # The main thread continues with the simulation
-        for i in range(self.doomsday_ticker):
-            self.simulate_step()
-            if self.show:
-                update_plot()
-            time.sleep(0.005)
-            print(
-                f"Step {i + 1}, organoids: {len(self.organoids)}, Food: {len(self.food)}"
-            )
-        return self.generate_score_card()
+        try:
+            for i in range(self.doomsday_ticker):
+                self.step = i +1 
+                self.simulate_step()
+                if self.show:
+                    update_plot()
+                time.sleep(0.005)
+                print(
+                    f"Step {self.step}, organoids: {len(self.organoids)}, Food: {len(self.food)}"
+                )
+        except KeyboardInterrupt:
+            pass
+        self.print_scorecard()
 
     def spawn_organoids(self, num_organoids, organoid_params):
         """
@@ -415,8 +426,9 @@ class World:
         self.organoids = [
             org for org in self.organoids if org is not None and org.alive
         ]
+        self.dead_organoids = list()
         for organoid in self.organoids:
-            organoid.update(self.food, self.organoids, self.obstacles)
+            organoid.update(self.food, self.organoids, self.obstacles, self.step)
             if (
                 0 <= organoid.position[0] <= 2 * self.radius
                 and 0 <= organoid.position[1] <= 2 * self.radius
@@ -425,5 +437,7 @@ class World:
             else:
                 organoid.position = (self.radius, self.radius)
             if not organoid.is_alive():
+                self.dead_organoids.append(organoid)
                 self.organoids.remove(organoid)
         self.handle_collisions()
+        self.scorecard = self.generate_score_card()

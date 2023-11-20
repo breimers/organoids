@@ -34,11 +34,11 @@ from organoids.world import World
 if __name__ == "__main__":
     # Create the world
     world = World(
-        name="Midgard",
+        name="midgard",
         radius=100,
-        doomsday_ticker=500,
-        obstacle_ratio=0.01,
-        abundance=100.00,
+        doomsday_ticker=250,
+        obstacle_ratio=0.07,
+        abundance=75.00,
         show=True,
     )
 
@@ -53,29 +53,50 @@ if __name__ == "__main__":
         "rgb": (255, 10, 10),
         "position": (0, 0),
         "smart": False,
-        "cooldown_duration": 20,
+        "cooldown_duration": 10,
         "modeltype": None,
         "hidden_layers": [32, 8, 16, 4],
     }
-    evolved_params = organoid_params.copy()
-    evolved_params["smart"] = True
-    evolved_params["name"] = "Brainy Blob"
-    evolved_params["modeltype"] = "NN"
-    new_evolved_params = evolved_params.copy()
-    new_evolved_params["name"] = "Learny Blob"
-    new_evolved_params["modeltype"] = "DQN"
+    
+    nn_organoid_params = organoid_params.copy()
+    nn_organoid_params["smart"] = True
+    nn_organoid_params["name"] = "Brainy Blob"
+    nn_organoid_params["modeltype"] = "NN"
+    nn_organoid_params["rgb"] = (10, 10, 255)
+    
+    dqn_organoid_params = nn_organoid_params.copy()
+    dqn_organoid_params["name"] = "Learny Blob"
+    dqn_organoid_params["modeltype"] = "DQN"
+    dqn_organoid_params["rgb"] = (128, 10, 128)
+    
+    cnn_organoid_params = nn_organoid_params.copy()
+    cnn_organoid_params["name"] = "Clever Blob"
+    cnn_organoid_params["modeltype"] = "CNN"
+    cnn_organoid_params["hidden_layers"] = [32, 32]
+    cnn_organoid_params["rgb"] = (10, 128, 128)
+    
+    dqcnn_organoid_params = cnn_organoid_params.copy()
+    dqcnn_organoid_params["name"] = "Magic Blob"
+    dqcnn_organoid_params["modeltype"] = "DQCNN"
+    dqcnn_organoid_params["rgb"] = (47, 152, 161)
+    
+    organoid_pops = [
+        (1, organoid_params),
+        (1, nn_organoid_params),
+        (1, cnn_organoid_params),
+        (1, dqcnn_organoid_params),
+    ]
     food_params = {"name": "Algae", "size": 2.5, "calories": 200, "rgb": (10, 255, 10)}
     obstacle_params = {"name": "Rock", "size": 7, "rgb": (100, 100, 100)}
 
     # Spawn initial organoids and food
 
-    world.spawn_food(num_food=100, food_params=food_params)
-    world.spawn_obstacles(5, obstacle_params=obstacle_params)
+    world.spawn_food(num_food=world.abundance, food_params=food_params)
+    world.spawn_obstacles(world.obstacle_ratio*world.abundance, obstacle_params=obstacle_params)
     world.spawn_walls()
-    world.spawn_organoids(num_organoids=2, organoid_params=organoid_params)
-    world.spawn_organoids(num_organoids=1, organoid_params=evolved_params)
-    world.spawn_organoids(num_organoids=1, organoid_params=new_evolved_params)
-
+    for pop, params in organoid_pops:
+        world.spawn_organoids(num_organoids=pop, organoid_params=params)
+    
     FOOD_SPAWN_INTERVAL = (
         5  # Adjust the interval (in steps) for continuous food spawning
     )
