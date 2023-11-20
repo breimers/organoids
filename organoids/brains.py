@@ -7,6 +7,8 @@ Contains classes and methods for building neural networks.
 Classes:
     NN:  Traditional Neural Network with arbitrary amount of hidden layers and a training buffer
     DQN: Deep Q Network with an arbitrary amount of hidden layers and a training buffer
+    CNN: Convolutional Neural Network for Organoid Agents
+    DQCNN: Combination of Deep Q Network and Convolutional Neural Network
 
 Author: Bradley Reimers
 Date: 11/19/2023
@@ -35,6 +37,8 @@ class NN:
         state_space_size (int): Dimension of the state space.
         action_space_size (int): Dimension of the action space.
         model (Sequential): Keras Sequential model for the neural network.
+        buffer (deque): Experience replay buffer.
+        batch_size (int): Size of the mini-batch used in training.
 
     Methods:
         choose_action(state):
@@ -79,7 +83,10 @@ class NN:
 
     def build_network(self):
         """
-        Builds the base model for training
+        Builds the base model for training.
+
+        Returns:
+            Sequential: Keras Sequential model for the neural network.
 
         """
         model = Sequential()
@@ -238,12 +245,8 @@ class DQN(NN):
         """
         Build a Q-network model with specified input and output dimensions.
 
-        Args:
-            state_size (int): Dimension of the state space.
-            action_size (int): Dimension of the action space.
-
         Returns:
-            keras.models.Sequential: A Q-network model.
+            Sequential: A Q-network model.
 
         """
         model = Sequential()
@@ -365,6 +368,9 @@ class CNN(NN):
         """
         Builds the CNN model for training.
 
+        Returns:
+            Sequential: Keras Sequential model for the CNN.
+
         """
         model = Sequential()
 
@@ -392,6 +398,12 @@ class CNN(NN):
 
 
 class DQCNN(DQN):
+    """
+    Combination of Deep Q Network and Convolutional Neural Network.
+
+    This class combines the architecture of a Deep Q Network and a Convolutional Neural Network.
+
+    """
     build_network = CNN.build_network
 
 

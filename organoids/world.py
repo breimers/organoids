@@ -149,6 +149,13 @@ class World:
                 self.food.append(food)
 
     def generate_score_card(self):
+        """
+        Generate a scorecard containing information about all organoids.
+
+        Returns:
+            pd.DataFrame: DataFrame containing organoid information such as ID, score, name, size, etc.
+
+        """
         scores = list()
         all_organoids = self.organoids.copy()
         all_organoids.extend(self.dead_organoids.copy())
@@ -173,6 +180,12 @@ class World:
         return scorecard
 
     def print_scorecard(self):
+        """
+        Generate and save a CSV file with the scorecard.
+
+        The CSV file is saved with a filename based on the world run ID.
+
+        """
         self.scorecard = self.generate_score_card()
         self.scorecard.to_csv(f"{self.world_run_id}.csv")
 
