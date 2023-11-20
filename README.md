@@ -3,7 +3,7 @@ NN powered Single celled organism simulation
 
 # about
 
-This is a passion project of mine to create an open-source ecology simulator powered by a flexible NN architecture.
+This is a passion project of mine to create an open-source ecological simulator powered by a flexible NN architecture to represent environmental agents.
 While it's currently a simple implementation, it may serve as the base for more complex projects in the future.
 
 # getting started
