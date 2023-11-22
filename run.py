@@ -33,14 +33,7 @@ from organoids.world import World
 
 if __name__ == "__main__":
     # Create the world
-    world = World(
-        name="midgard",
-        radius=100,
-        doomsday_ticker=250,
-        obstacle_ratio=0.07,
-        abundance=75.00,
-        show=True,
-    )
+
 
     # Define parameters for objects
     organoid_params = {
@@ -91,6 +84,15 @@ if __name__ == "__main__":
 
     # Spawn initial organoids and food
 
+    world = World(
+        name="midgard",
+        radius=100,
+        doomsday_ticker=250,
+        obstacle_ratio=0.07,
+        abundance=75.00,
+        show=True,
+        food_params=food_params
+    )
     world.spawn_food(num_food=world.abundance, food_params=food_params)
     world.spawn_obstacles(
         world.obstacle_ratio * world.abundance, obstacle_params=obstacle_params
@@ -99,14 +101,5 @@ if __name__ == "__main__":
     for pop, params in organoid_pops:
         world.spawn_organoids(num_organoids=pop, organoid_params=params)
 
-    FOOD_SPAWN_INTERVAL = (
-        5  # Adjust the interval (in steps) for continuous food spawning
-    )
-    food_spawner_thread = threading.Thread(
-        target=world.spawn_continuous_food, args=(FOOD_SPAWN_INTERVAL, food_params)
-    )
-    food_spawner_thread.start()
-
     # Kick off visualization
     world.run_simulation()
-    food_spawner_thread.join()

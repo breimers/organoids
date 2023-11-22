@@ -169,6 +169,8 @@ class Organoid(BaseObject):
 
         """
         super().__init__(name, size, position, rgb, 3)
+        self.optical_grid_shape = (20, 20, 5)
+        self.optical_grid = np.zeros(self.optical_grid_shape, dtype=float)
         self.lifespan = 0
         self.max_lifespan = int(lifespan) or 100
         self.calories = int(calories) or 100  # energy
@@ -238,7 +240,9 @@ class Organoid(BaseObject):
             objects.extend(organoids)
             objects = self.filter_objs_by_distance(objects)
             delta_score = self.score - self.last_score
-            self.train_neural_network(delta_score, objects, step)
+            self.optical_grid = self.update_optical_grid(objects)
+            print(np.count_nonzero(self.optical_grid))
+            self.train_neural_network(delta_score, step)
         else:
             self.move(random.uniform(-1.00, 1.00), random.uniform(-1.00, 1.00))
             self.metabolize()
@@ -249,53 +253,73 @@ class Organoid(BaseObject):
         if self.lifespan >= self.max_lifespan:
             self.alive = False
 
-    def train_neural_network(self, delta_score, objects, step):
+    def resize_grid(self, grid):
+        """
+        Resize the input grid to the desired shape, preserving data.
+
+        Args:
+            grid (numpy.ndarray): Input grid.
+            desired_shape (tuple): Desired shape of the grid.
+
+        Returns:
+            numpy.ndarray: Resized grid.
+
+        """
+        # Calculate padding for each dimension
+        pad_x = max(0, self.optical_grid_shape[0] - grid.shape[0])
+        pad_y = max(0, self.optical_grid_shape[1] - grid.shape[1])
+
+        # Pad the grid
+        padded_grid = np.pad(grid, ((0, pad_x), (0, pad_y), (0, 0)), mode='constant')
+            # Ensure the grid has the desired shape by slicing if necessary
+        resized_grid = padded_grid[:self.optical_grid_shape[0], :self.optical_grid_shape[1], :self.optical_grid_shape[2]]
+        return resized_grid
+
+    def update_optical_grid(self, objects):
+        grid = np.zeros(
+            (
+                int(self.vision_range), 
+                int(self.vision_range), 
+                self.optical_grid_shape[-1]
+            ),
+            dtype=float
+        )
+        if objects:
+            for obj in objects:
+                x, y = self.position
+                obj_name = sum([ord(char) for char in obj["name"]])
+                obj_x, obj_y = obj["x-position"], obj["y-position"]
+                pos = (
+                    int(max(min([self.vision_range/2 + (obj_x - x), 1]), self.vision_range-1)),
+                    int(max(min([self.vision_range/2 + (obj_y - y), 1]), self.vision_range-1)),
+                )
+                grid[pos[0], pos[1]] = np.array(
+                    [obj_name, obj["category"], obj["size"], obj["x-position"], obj["y-position"]]
+                )
+        self.optical_grid = self.resize_grid(grid)
+        return self.optical_grid
+
+    def train_neural_network(self, delta_score, step):
         """
         Train the neural network based on experiences.
 
         Args:
             delta_score (int): The change in the organoid's score.
-            objects (list): List of objects within the organoid's vision range.
             step (int): Time vector
-
         """
-        # Determine the maximum number of objects to consider
-        max_objects = 10  # Adjust this based on your requirements
-
-        # Create arrays to hold the object representations and their counts
-        object_representations = np.zeros(
-            (max_objects, 4), dtype=float
-        )  # Assuming 4 attributes per object
-        object_counts = min(len(objects), max_objects)
-
-        # Flatten attributes for each object
-        for i in range(object_counts):
-            obj = objects[i]
-            object_representations[i] = [
-                obj["category"],
-                obj["size"],
-                obj["x-position"],
-                obj["y-position"],
-            ]
-
-        # Fill any remaining slots with zeros
-        for i in range(object_counts, max_objects):
-            object_representations[i] = [0, 0, 0, 0]
-
-        # Construct the state and action arrays
         state = np.array(
             [
                 self.calories,
                 self.size,
                 self.position[0],
                 self.position[1],
-                delta_score,
-                *object_representations.flatten(),
                 self.reproduction_cooldown,
+                *self.optical_grid.flatten(),
                 step,
+                delta_score,
             ]
         ).reshape(1, -1)
-
+        
         action = self.brain.choose_action(state)
 
         # Calculate new position based on action
@@ -313,10 +337,10 @@ class Organoid(BaseObject):
                 self.size,
                 self.position[0],
                 self.position[1],
-                reward,
-                *object_representations.flatten(),
                 self.reproduction_cooldown,
+                *self.optical_grid.flatten(),
                 step,
+                delta_score,
             ]
         ).reshape(1, -1)
 

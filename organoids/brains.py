@@ -55,7 +55,7 @@ class NN:
         eps=0.3,
         eps_decay=0.95,
         hidden_sizes=[32, 8, 16, 4],
-        state_space_size=47,
+        state_space_size=2007,
         action_space_size=2,
         buffer_size=20,
     ):
@@ -184,13 +184,13 @@ class DQN(NN):
         eps_decay (float): Epsilon decay rate (default: 0.95).
         hidden_sizes (list): List of integers, specifying the sizes of hidden layers
             (default: [64, 32, 48, 16, 8, 4]).
-        state_space_size (int): Dimension of the state space (default: 47).
+        state_space_size (int): Dimension of the state space (default: 2007).
         action_space_size (int): Dimension of the action space (default: 2).
         buffer_size (int): Maximum size of the replay buffer (default: 20).
 
     Methods:
         __init__(self, discount=0.95, eps=0.3, eps_decay=0.95,
-            hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=47,
+            hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=2007,
               action_space_size=2, buffer_size=20):
             Initialize the DQN with the provided hyperparameters.
 
@@ -211,7 +211,7 @@ class DQN(NN):
         eps=0.3,
         eps_decay=0.95,
         hidden_sizes=[64, 32, 48, 16, 8, 4],
-        state_space_size=47,
+        state_space_size=2007,
         action_space_size=2,
         buffer_size=20,
     ):
@@ -224,7 +224,7 @@ class DQN(NN):
             eps_decay (float, optional): Epsilon decay rate (default: 0.95).
             hidden_sizes (list, optional): List of integers, specifying the sizes of hidden layers
                 (default: [64, 32, 48, 16, 8, 4]).
-            state_space_size (int, optional): Dimension of the state space (default: 47).
+            state_space_size (int, optional): Dimension of the state space (default: 2007).
             action_space_size (int, optional): Dimension of the action space (default: 2).
             buffer_size (int, optional): Maximum size of the replay buffer (default: 20).
 
@@ -336,7 +336,7 @@ class CNN(NN):
         eps=0.3,
         eps_decay=0.95,
         hidden_sizes=[32, 64],
-        state_space_size=47,
+        state_space_size=2007,
         action_space_size=2,
         buffer_size=20,
     ):
@@ -349,7 +349,7 @@ class CNN(NN):
             eps_decay (float, optional): Rate at which exploration rate decays. Default is 0.999.
             conv_params (list, optional): List of convolutional layer parameters.
             dense_sizes (list, optional): List of dense layer sizes.
-            state_space_size (int, optional): Dimension of the state space. Default is 47.
+            state_space_size (int, optional): Dimension of the state space. Default is 2007.
             action_space_size (int, optional): Dimension of the action space. Default is 2.
 
         """
@@ -374,7 +374,7 @@ class CNN(NN):
         """
         model = Sequential()
 
-        # Reshape the input to (1, 47)
+        # Reshape the input to (1, 2007)
         model.add(
             Reshape((self.state_space_size, 1), input_shape=(self.state_space_size,))
         )

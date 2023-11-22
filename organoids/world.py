@@ -17,6 +17,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import threading
 from .objects import Organoid, Food, Obstacle
 
 
@@ -69,7 +70,7 @@ class World:
 
     """
 
-    def __init__(self, name, radius, doomsday_ticker, obstacle_ratio, abundance, show):
+    def __init__(self, name, radius, doomsday_ticker, obstacle_ratio, abundance, show, food_params=dict()):
         """
         Initialize the World object with simulation parameters.
 
@@ -94,6 +95,10 @@ class World:
         self.food = []
         self.obstacles = []
         self.show = show
+        self.spawn_thread = threading.Thread(
+            target=self.spawn_continuous_food, 
+            args=(5, food_params),
+        )
 
     def handle_collisions(self):
         """
@@ -116,8 +121,8 @@ class World:
                         x_diff = organoid.position[0] - obstacle.position[0]
                         y_diff = organoid.position[1] - obstacle.position[1]
                         organoid.position = (
-                            organoid.position[0] + 5 * x_diff,
-                            organoid.position[1] + 5 * y_diff,
+                            organoid.position[0] + 1 * x_diff,
+                            organoid.position[1] + 1 * y_diff,
                         )
                 # Check for collisions between organoids
                 for other in self.organoids:
@@ -197,6 +202,7 @@ class World:
         updating the state of the world and organoids.
 
         """
+        self.spawn_thread.start()
         if self.show:
             fig, ax = plt.subplots()
             ax.set_xlim(0, 2 * self.radius)
@@ -322,6 +328,7 @@ class World:
                 print(
                     f"Step {self.step}, organoids: {len(self.organoids)}, Food: {len(self.food)}"
                 )
+            self.spawn_thread.join
         except KeyboardInterrupt:
             pass
         self.print_scorecard()
