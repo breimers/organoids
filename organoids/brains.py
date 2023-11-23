@@ -52,8 +52,9 @@ class NN:
     def __init__(
         self,
         discount=0.95,
-        eps=0.5,
-        eps_decay=0.95,
+        eps=0.7,
+        eps_decay=0.001,
+        eps_min=0.1,
         hidden_sizes=[32, 8, 16, 4],
         state_space_size=2007,
         action_space_size=2,
@@ -74,6 +75,8 @@ class NN:
         self.discount = discount
         self.eps = eps
         self.eps_decay = eps_decay
+        self.eps_min = eps_min
+        self.decay_step = 0
         self.hidden_sizes = hidden_sizes
         self.state_space_size = state_space_size
         self.action_space_size = action_space_size
@@ -97,6 +100,20 @@ class NN:
         model.compile(loss="mse", optimizer="adam", metrics=["mae"])
         return model
 
+    def exponential_decay_np(self, initial_value, decay_rate, time_array):
+        """
+        Calculate the values after a certain time array using exponential decay.
+
+        Parameters:
+        - initial_value: The initial value at time t=0.
+        - decay_rate: The rate at which the value decreases over time.
+        - time_array: An array of elapsed times.
+
+        Returns:
+        An array of values after the specified times.
+        """
+        return initial_value * np.exp(-decay_rate * time_array)
+
     def choose_action(self, state):
         """
         Choose an action for the given state.
@@ -109,7 +126,15 @@ class NN:
                 chosen action.
 
         """
-        self.eps *= self.eps_decay
+        self.eps = max(
+            self.eps_min, 
+            self.exponential_decay_np(
+                self.eps, 
+                self.eps_decay, 
+                self.decay_step
+            )
+        )
+        self.decay_step += 1  # Increment the time step
         if np.random.rand() <= self.eps:
             # Explore: choose a random action
             return (random.uniform(-1, 1), random.uniform(-1, 1))
@@ -189,7 +214,7 @@ class DQN(NN):
         buffer_size (int): Maximum size of the replay buffer (default: 20).
 
     Methods:
-        __init__(self, discount=0.95, eps=0.3, eps_decay=0.95,
+        __init__(self, discount=0.95, eps=0.3, eps_decay=0.001,
             hidden_sizes=[64, 32, 48, 16, 8, 4], state_space_size=2007,
               action_space_size=2, buffer_size=20):
             Initialize the DQN with the provided hyperparameters.
@@ -208,8 +233,9 @@ class DQN(NN):
     def __init__(
         self,
         discount=0.95,
-        eps=0.3,
-        eps_decay=0.95,
+        eps=0.7,
+        eps_decay=0.001,
+        eps_min=0.1,
         hidden_sizes=[64, 32, 48, 16, 8, 4],
         state_space_size=2007,
         action_space_size=2,
@@ -233,6 +259,7 @@ class DQN(NN):
             discount,
             eps,
             eps_decay,
+            eps_min,
             hidden_sizes,
             state_space_size,
             action_space_size,
@@ -333,8 +360,9 @@ class CNN(NN):
     def __init__(
         self,
         discount=0.95,
-        eps=0.3,
-        eps_decay=0.95,
+        eps=0.7,
+        eps_decay=0.001,
+        eps_min=0.1,
         hidden_sizes=[32, 64],
         state_space_size=2007,
         action_space_size=2,
@@ -357,6 +385,7 @@ class CNN(NN):
             discount=discount,
             eps=eps,
             eps_decay=eps_decay,
+            eps_min=eps_min,
             hidden_sizes=hidden_sizes,
             state_space_size=state_space_size,
             action_space_size=action_space_size,

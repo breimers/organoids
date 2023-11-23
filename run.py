@@ -86,7 +86,7 @@ if __name__ == "__main__":
         name="midgard",
         radius=100,
         doomsday_ticker=500,
-        obstacle_ratio=0.05,
+        obstacle_ratio=0.1,
         abundance=100.00,
         show=True,
         food_params=food_params,

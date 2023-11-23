@@ -110,8 +110,8 @@ class World:
             target=self.spawn_continuous_food,
             args=(5, food_params),
         )
-        self.food_params = (food_params,)
-        self.obstacle_params = (obstacle_params,)
+        self.food_params = food_params
+        self.obstacle_params = obstacle_params
         self.organoid_pops = organoid_pops
 
     def handle_collisions(self):

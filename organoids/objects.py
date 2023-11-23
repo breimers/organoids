@@ -69,6 +69,10 @@ class BaseObject:
         """
         return f"{self.name}\nSize: {self.size:.2f}"
 
+    @property
+    def visibility(self):
+        return int(self.size * sum(list(self.rgb)))
+
 
 class Organoid(BaseObject):
     """
@@ -233,6 +237,7 @@ class Organoid(BaseObject):
             obstacles (list): List of obstacle objects.
 
         """
+        obstacles =[obs for obs in obstacles if obs.name != "Wall"]
         if self.smart:
             organoids = [organoid for organoid in organoids if organoid.id != self.id]
             objects = list(food)
@@ -241,7 +246,6 @@ class Organoid(BaseObject):
             objects = self.filter_objs_by_distance(objects)
             delta_score = self.score - self.last_score
             self.optical_grid = self.update_optical_grid(objects)
-            print(np.count_nonzero(self.optical_grid))
             self.train_neural_network(delta_score, step)
         else:
             self.move(random.uniform(-1.00, 1.00), random.uniform(-1.00, 1.00))
@@ -613,10 +617,6 @@ class Food(BaseObject):
         """
         base_info = super().get_info()
         return f"{base_info}\nCalories: {self.calories:.2f}"
-
-    @property
-    def visibility(self):
-        return int(self.size * sum(list(self.rgb)))
 
 
 class Obstacle(BaseObject):
