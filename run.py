@@ -33,7 +33,6 @@ from organoids.world import World
 if __name__ == "__main__":
     # Create the world
 
-
     # Define parameters for objects
     organoid_params = {
         "name": "Silly Blob",
@@ -90,15 +89,9 @@ if __name__ == "__main__":
         obstacle_ratio=0.05,
         abundance=100.00,
         show=True,
-        food_params=food_params
+        food_params=food_params,
+        obstacle_params=obstacle_params,
+        organoid_pops=organoid_pops,
     )
-    world.spawn_food(num_food=world.abundance, food_params=food_params)
-    world.spawn_obstacles(
-        world.obstacle_ratio * world.abundance, obstacle_params=obstacle_params
-    )
-    world.spawn_walls()
-    for pop, params in organoid_pops:
-        world.spawn_organoids(num_organoids=pop, organoid_params=params)
-
     # Kick off visualization
     world.run_simulation()

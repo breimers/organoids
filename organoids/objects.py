@@ -270,19 +270,23 @@ class Organoid(BaseObject):
         pad_y = max(0, self.optical_grid_shape[1] - grid.shape[1])
 
         # Pad the grid
-        padded_grid = np.pad(grid, ((0, pad_x), (0, pad_y), (0, 0)), mode='constant')
-            # Ensure the grid has the desired shape by slicing if necessary
-        resized_grid = padded_grid[:self.optical_grid_shape[0], :self.optical_grid_shape[1], :self.optical_grid_shape[2]]
+        padded_grid = np.pad(grid, ((0, pad_x), (0, pad_y), (0, 0)), mode="constant")
+        # Ensure the grid has the desired shape by slicing if necessary
+        resized_grid = padded_grid[
+            : self.optical_grid_shape[0],
+            : self.optical_grid_shape[1],
+            : self.optical_grid_shape[2],
+        ]
         return resized_grid
 
     def update_optical_grid(self, objects):
         grid = np.zeros(
             (
-                int(self.vision_range), 
-                int(self.vision_range), 
-                self.optical_grid_shape[-1]
+                int(self.vision_range),
+                int(self.vision_range),
+                self.optical_grid_shape[-1],
             ),
-            dtype=float
+            dtype=float,
         )
         if objects:
             for obj in objects:
@@ -290,11 +294,27 @@ class Organoid(BaseObject):
                 obj_name = sum([ord(char) for char in obj["name"]])
                 obj_x, obj_y = obj["x-position"], obj["y-position"]
                 pos = (
-                    int(max(min([self.vision_range/2 + (obj_x - x), 1]), self.vision_range-1)),
-                    int(max(min([self.vision_range/2 + (obj_y - y), 1]), self.vision_range-1)),
+                    int(
+                        max(
+                            min([self.vision_range / 2 + (obj_x - x), 1]),
+                            self.vision_range - 1,
+                        )
+                    ),
+                    int(
+                        max(
+                            min([self.vision_range / 2 + (obj_y - y), 1]),
+                            self.vision_range - 1,
+                        )
+                    ),
                 )
                 grid[pos[0], pos[1]] = np.array(
-                    [obj_name, obj["category"], obj["size"], obj["x-position"], obj["y-position"]]
+                    [
+                        obj_name,
+                        obj["category"],
+                        obj["size"],
+                        obj["x-position"],
+                        obj["y-position"],
+                    ]
                 )
         self.optical_grid = self.resize_grid(grid)
         return self.optical_grid
@@ -319,7 +339,7 @@ class Organoid(BaseObject):
                 delta_score,
             ]
         ).reshape(1, -1)
-        
+
         action = self.brain.choose_action(state)
 
         # Calculate new position based on action

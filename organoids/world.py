@@ -70,7 +70,18 @@ class World:
 
     """
 
-    def __init__(self, name, radius, doomsday_ticker, obstacle_ratio, abundance, show, food_params=dict()):
+    def __init__(
+        self,
+        name,
+        radius,
+        doomsday_ticker,
+        obstacle_ratio,
+        abundance,
+        show,
+        food_params=dict(),
+        obstacle_params=dict(),
+        organoid_pops=list(),
+    ):
         """
         Initialize the World object with simulation parameters.
 
@@ -96,9 +107,12 @@ class World:
         self.obstacles = []
         self.show = show
         self.spawn_thread = threading.Thread(
-            target=self.spawn_continuous_food, 
+            target=self.spawn_continuous_food,
             args=(5, food_params),
         )
+        self.food_params = (food_params,)
+        self.obstacle_params = (obstacle_params,)
+        self.organoid_pops = organoid_pops
 
     def handle_collisions(self):
         """
@@ -202,6 +216,13 @@ class World:
         updating the state of the world and organoids.
 
         """
+        self.spawn_food(num_food=self.abundance, food_params=self.food_params)
+        self.spawn_obstacles(
+            self.obstacle_ratio * self.abundance, obstacle_params=self.obstacle_params
+        )
+        self.spawn_walls()
+        for pop, params in self.organoid_pops:
+            self.spawn_organoids(num_organoids=pop, organoid_params=params)
         self.spawn_thread.start()
         if self.show:
             fig, ax = plt.subplots()

@@ -404,6 +404,7 @@ class DQCNN(DQN):
     This class combines the architecture of a Deep Q Network and a Convolutional Neural Network.
 
     """
+
     build_network = CNN.build_network
 
 
