@@ -52,7 +52,7 @@ class NN:
     def __init__(
         self,
         discount=0.95,
-        eps=0.3,
+        eps=0.5,
         eps_decay=0.95,
         hidden_sizes=[32, 8, 16, 4],
         state_space_size=2007,

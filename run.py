@@ -28,7 +28,6 @@ License:
 
 """
 
-import threading
 from organoids.world import World
 
 if __name__ == "__main__":
@@ -87,9 +86,9 @@ if __name__ == "__main__":
     world = World(
         name="midgard",
         radius=100,
-        doomsday_ticker=250,
-        obstacle_ratio=0.07,
-        abundance=75.00,
+        doomsday_ticker=500,
+        obstacle_ratio=0.05,
+        abundance=100.00,
         show=True,
         food_params=food_params
     )
